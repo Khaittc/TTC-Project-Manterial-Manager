@@ -1,0 +1,72 @@
+// English UI String Dictionary (Prepared for i18n architectural compatibility)
+export const en = {
+  app: {
+    title: 'TTC Project Material Manager',
+    subtitle: 'Project Materials, Inventory & Supplier Management',
+    prototypeBadge: 'PROTOTYPE V0 · MOCK DATA · NOT PRODUCTION',
+    waitingSpec: 'Pending SPEC Lock',
+    specNoteTooltip: 'This is a UI Prototype V0 simulation. Production SPEC not finalized.',
+  },
+  nav: {
+    dashboard: 'Dashboard',
+    monitoring: 'Project Materials Monitoring',
+    projects: 'Project Management',
+    materials: 'Materials Catalog',
+    stockIn: 'Stock In',
+    stockOut: 'Stock Out',
+    history: 'Inventory History',
+    systemMasters: 'System Masters',
+    users: 'Users & Roles',
+  },
+  common: {
+    search: 'Search...',
+    filter: 'Filter',
+    refresh: 'Refresh',
+    create: 'Create New',
+    save: 'Save',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    edit: 'Edit',
+    view: 'View',
+    actions: 'Actions',
+    status: 'Status',
+    active: 'Active',
+    inactive: 'Inactive',
+    archived: 'Archived',
+    all: 'All',
+    notes: 'Notes',
+    description: 'Description',
+    emptyData: 'No data to display',
+    noResults: 'No results found matching current filter',
+    requiredField: 'Required field',
+  },
+  projectStatus: {
+    IN_PROGRESS: 'In Progress',
+    COMPLETED: 'Completed',
+    ON_HOLD: 'On Hold',
+    ATTENTION_NEEDED: 'Attention Needed',
+  },
+  materialStatus: {
+    ACTIVE: 'Active',
+    ARCHIVED: 'Archived',
+  },
+  bomStatus: {
+    NOT_PURCHASED: 'Not Purchased',
+    PURCHASING: 'Purchasing',
+    PARTIALLY_RECEIVED: 'Partially Received',
+    FULFILLED: 'Fulfilled',
+  },
+  invoiceStatus: {
+    AVAILABLE: 'Available',
+    NOT_AVAILABLE: 'Missing Invoice',
+  },
+  priceTrend: {
+    INCREASED: 'Price Increased',
+    DECREASED: 'Price Decreased',
+    UNCHANGED: 'Unchanged',
+    NO_PRICE: 'No Price',
+  },
+};
+
+export { vi } from './vi';

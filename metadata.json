@@ -1,0 +1,6 @@
+{
+  "name": "TTC Project Material Manager",
+  "description": "Project Materials, Inventory & Supplier Management - Enterprise UI Prototype V0",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
