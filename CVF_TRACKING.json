@@ -1,0 +1,1879 @@
+{
+  "schemaVersion": "1.0.0",
+  "documentType": "CVF_TRACKING",
+  "authority": {
+    "level": "TRACKING_ONLY",
+    "statement": "This file is an operational snapshot and AI handoff index. It does not redefine CVF requirements.",
+    "conflictResolutionOrder": [
+      "CVF_GOVERNANCE.md",
+      "roadmap.md",
+      "CVF_SPEC.md",
+      "CVF_UI.md",
+      "CVF_TRACKING.json",
+      "application source code"
+    ],
+    "rules": [
+      "Never modify protected CVF files from tracking status alone.",
+      "UI_REVIEW_PASS may only be granted by Product Owner/CVF reviewer.",
+      "If repository HEAD differs from repositories.application.headCommit, treat this snapshot as stale until reviewed.",
+      "Semantic changes still require reading the relevant CVF_SPEC/CVF_UI sections listed in handoff.requiredReads."
+    ]
+  },
+  "metadata": {
+    "trackedProject": "TTC Project Material Manager",
+    "projectSubtitle": "Project Materials, Inventory & Supplier Management",
+    "trackerVersion": "1.0.0",
+    "statusDate": "2026-08-29",
+    "currentPhase": "Phase 2 — AI Studio Product Prototype",
+    "currentFocus": "Record manual acceptance for REQ-04B and REQ-04C, then implement REQ-04D.",
+    "productionAuthority": "NOT_AUTHORIZED",
+    "prototypePromotionDefault": "PARTIAL_REUSE"
+  },
+  "repositories": {
+    "application": {
+      "name": "Khaittc/TTC-Project-Manterial-Manager",
+      "branch": "main",
+      "headCommit": "5578301b14023b4b92081b94033214f19dcca16d",
+      "headMessage": "fix Project BOM edit UX",
+      "trackingFilePath": "CVF_TRACKING.json"
+    },
+    "statusConsole": {
+      "name": "Khaittc/CVF-Status",
+      "branch": "main",
+      "headCommit": "9948987d1fdf0c23c4797d9132831a4ca0a53fcd",
+      "role": "Read/import/export and visualize this tracking file."
+    }
+  },
+  "sourceFiles": [
+    {
+      "path": "CVF_GOVERNANCE.md",
+      "role": "Authority and file protection",
+      "protected": true
+    },
+    {
+      "path": "roadmap.md",
+      "role": "Delivery phases and gates",
+      "protected": true
+    },
+    {
+      "path": "CVF_SPEC.md",
+      "role": "Business semantics",
+      "protected": true
+    },
+    {
+      "path": "CVF_UI.md",
+      "role": "Frozen prototype UI contract",
+      "protected": true
+    },
+    {
+      "path": "CVF_TRACKING.json",
+      "role": "Status snapshot, evidence index and AI handoff",
+      "protected": false
+    }
+  ],
+  "currentState": {
+    "overallStatus": "IN_PROGRESS",
+    "currentEpic": "REQ-04 — Project Detail / Overview / BOM",
+    "currentRequest": "REQ-REMEDIATION-04C-BOM-STRUCTURE",
+    "currentRequestStatus": "SOURCE_REVIEW_PASS_PENDING_MANUAL",
+    "nextAllowedRequest": "REQ-REMEDIATION-04D-BOM-SUPPLIER-SELECTION",
+    "acceptedRequestCount": 4,
+    "pendingManualSuites": [
+      "SUITE-REQ-04B",
+      "SUITE-REQ-04C"
+    ],
+    "blockers": [
+      "REQ-04B manual cross-test results not recorded.",
+      "REQ-04C manual cross-test results not recorded.",
+      "REQ-04D not implemented."
+    ],
+    "latestReviewerFinding": "REQ-04C source correction at commit 5578301b... passes source audit; manual UI acceptance remains pending."
+  },
+  "specs": [
+    {
+      "id": "SPEC-001",
+      "domain": "Product Intent",
+      "status": "CONFIRMED",
+      "summary": "Ứng dụng nội bộ quản lý vật tư, giá nhà cung cấp, dự án, BOM và các luồng kho cho công ty dịch vụ kỹ thuật.",
+      "nextAction": "Giữ làm product baseline.",
+      "implementationRelation": "APPLIES_TO_ALL"
+    },
+    {
+      "id": "SPEC-002",
+      "domain": "Authorization / RBAC",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Dynamic Role, multi-role user, allow-only, default deny, protected Admin, UI visibility theo Role.",
+      "nextAction": "Đã nghiệm thu Prototype RBAC; giữ nguyên tới customer demo.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-003",
+      "domain": "Material Identity",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Manufacturer + Manufacturer Model là identity; unique trong cùng Manufacturer.",
+      "nextAction": "Đã nghiệm thu Material identity UX.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-004",
+      "domain": "Material Lifecycle",
+      "status": "FROZEN_FOR_V1",
+      "summary": "ACTIVE → ARCHIVED; conditional hard delete; không lưu full change history.",
+      "nextAction": "Đã nghiệm thu archive/delete UX.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-005",
+      "domain": "Material Category",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Category phân cấp, configurable, một Material một Category.",
+      "nextAction": "Giữ làm master-data baseline.",
+      "implementationRelation": "BASELINE_PRESENT"
+    },
+    {
+      "id": "SPEC-006",
+      "domain": "Unit of Measure",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Một UOM cố định; UOM code unique; locked sau khi Material được dùng.",
+      "nextAction": "Đã nghiệm thu UOM lock trong Material.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-007",
+      "domain": "Manufacturer Master",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Manufacturer Code unique; Name có thể trùng; conditional delete.",
+      "nextAction": "Giữ làm master-data baseline.",
+      "implementationRelation": "BASELINE_PRESENT"
+    },
+    {
+      "id": "SPEC-008",
+      "domain": "Customer Master",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Customer Code unique; Customer có nhiều Project; delete blocked khi referenced.",
+      "nextAction": "Giữ làm master-data baseline.",
+      "implementationRelation": "BASELINE_PRESENT"
+    },
+    {
+      "id": "SPEC-009",
+      "domain": "Project Master",
+      "status": "BASELINE_CONFIRMED",
+      "summary": "Project Code unique; Customer từ master data; lifecycle cuối chưa khóa.",
+      "nextAction": "Tiếp tục Project Detail Prototype và customer review.",
+      "implementationRelation": "IN_PROGRESS"
+    },
+    {
+      "id": "SPEC-010",
+      "domain": "Supplier Master",
+      "status": "FROZEN_CORE",
+      "summary": "Tax Code unique; Name/Address có thể trùng; conditional delete.",
+      "nextAction": "Supplier Detail đã nghiệm thu; giữ master baseline.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-011",
+      "domain": "Supplier Material Price",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Một Current Price cho Material + Supplier; VND; chưa VAT; không quantity tier.",
+      "nextAction": "Đã nghiệm thu Supplier pricing UX.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-012",
+      "domain": "Rolling Price Snapshot",
+      "status": "FROZEN_FOR_V1",
+      "summary": "Chỉ giữ Previous và Current Price kèm Previous/Current Date.",
+      "nextAction": "Đã nghiệm thu rolling snapshot.",
+      "implementationRelation": "IMPLEMENTED_AND_UI_REVIEW_PASS"
+    },
+    {
+      "id": "SPEC-013",
+      "domain": "Preferred Supplier",
+      "status": "FROZEN_FOR_V1",
+      "summary": "0..1 Preferred Supplier cho một Material; replacement cần explicit action + confirmation.",
+      "nextAction": "Quick-action detail để customer demo review sau; invariant vẫn giữ.",
+      "implementationRelation": "CORE_PASS_DETAIL_DEFERRED"
+    },
+    {
+      "id": "SPEC-014",
+      "domain": "Supplier Recommendation",
+      "status": "FROZEN_CORE",
+      "summary": "Cheapest, Preferred và Final Supplier là ba khái niệm độc lập.",
+      "nextAction": "Hoàn thiện REQ-04D.",
+      "implementationRelation": "STRUCTURE_READY_SEMANTICS_PENDING"
+    },
+    {
+      "id": "SPEC-015",
+      "domain": "BOM",
+      "status": "PARTIAL",
+      "summary": "BOM line có bomQty, supplier recommendations, Final Supplier và amount; post-purchase edit/versioning còn mở.",
+      "nextAction": "Manual accept 04C, sau đó thực hiện 04D.",
+      "implementationRelation": "IN_PROGRESS"
+    },
+    {
+      "id": "SPEC-016",
+      "domain": "Goods Receiving",
+      "status": "FROZEN_CORE",
+      "summary": "Partial receiving; Actual Received phân bổ Project + Warehouse theo invariant.",
+      "nextAction": "Bắt đầu REQ-05 sau khi REQ-04D pass.",
+      "implementationRelation": "NOT_STARTED"
+    },
+    {
+      "id": "SPEC-017",
+      "domain": "BOM ↔ Inventory Movement",
+      "status": "FROZEN_CORE",
+      "summary": "BOM tăng/giảm chỉ đề xuất điều chuyển; user phải xác nhận; không tự động movement.",
+      "nextAction": "Để REQ-05 triển khai UI proposal/confirmation.",
+      "implementationRelation": "NOT_STARTED"
+    },
+    {
+      "id": "SPEC-018",
+      "domain": "Invoice Monitoring",
+      "status": "PARTIAL",
+      "summary": "Theo dõi Supplier đã có/chưa có hóa đơn; không phải accounting/payment module.",
+      "nextAction": "Thực hiện REQ-06 sau Receiving.",
+      "implementationRelation": "PLACEHOLDER_ONLY"
+    },
+    {
+      "id": "SPEC-019",
+      "domain": "Import Material",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "summary": "Import Material tách riêng; schema/workflow chưa khóa.",
+      "nextAction": "Giữ placeholder.",
+      "implementationRelation": "PLACEHOLDER"
+    },
+    {
+      "id": "SPEC-020",
+      "domain": "Import Supplier Price",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "summary": "Có direction bulk import nhưng file schema/workflow chưa khóa.",
+      "nextAction": "Giữ placeholder.",
+      "implementationRelation": "PLACEHOLDER"
+    },
+    {
+      "id": "SPEC-021",
+      "domain": "Inventory Topology",
+      "status": "NOT_STARTED",
+      "summary": "Chưa chốt một kho hay nhiều kho và stock calculation.",
+      "nextAction": "Review sau customer demo.",
+      "implementationRelation": "NOT_STARTED"
+    },
+    {
+      "id": "SPEC-022",
+      "domain": "Stock In / Stock Out",
+      "status": "PARTIAL",
+      "summary": "Sidebar/concept có nhưng transaction contract chưa đầy đủ.",
+      "nextAction": "Giữ placeholder đến Inventory SPEC.",
+      "implementationRelation": "PLACEHOLDER"
+    },
+    {
+      "id": "SPEC-023",
+      "domain": "Dashboard KPI Formula",
+      "status": "PARTIAL",
+      "summary": "Dashboard/Overview structure dùng mock data; công thức production chưa khóa.",
+      "nextAction": "Không tự freeze production KPI.",
+      "implementationRelation": "PROTOTYPE_ONLY"
+    },
+    {
+      "id": "SPEC-024",
+      "domain": "API / Data Contracts",
+      "status": "NOT_STARTED",
+      "summary": "Production API/schema/integration contracts chưa khóa.",
+      "nextAction": "Hoàn thiện sau customer UI acceptance.",
+      "implementationRelation": "OUT_OF_CURRENT_AUTHORITY"
+    },
+    {
+      "id": "SPEC-025",
+      "domain": "NFR / Security / Backup / Deployment",
+      "status": "NOT_STARTED",
+      "summary": "Technical NFR chưa final.",
+      "nextAction": "Technical SPEC phase.",
+      "implementationRelation": "OUT_OF_CURRENT_AUTHORITY"
+    },
+    {
+      "id": "SPEC-026",
+      "domain": "Final Acceptance & Work Orders",
+      "status": "NOT_STARTED",
+      "summary": "Production Build chưa được authorize.",
+      "nextAction": "Chỉ mở sau Final SPEC + Work Order.",
+      "implementationRelation": "NOT_AUTHORIZED"
+    }
+  ],
+  "uis": [
+    {
+      "id": "UI-001",
+      "module": "App Identity",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Product Intent",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-002",
+      "module": "Platform, i18n và Visual Style",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Product Intent",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-003",
+      "module": "Sidebar",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Authorization",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-004",
+      "module": "Icon System",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Authorization",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-005",
+      "module": "Dashboard",
+      "status": "FROZEN_FOR_CUSTOMER_DEMO",
+      "relatedSpec": "Dashboard KPI",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-006",
+      "module": "Danh mục hệ thống Tabs",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Master Data",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-007",
+      "module": "Project Master Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Project Master",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-008",
+      "module": "Customer Master Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Customer Master",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-009",
+      "module": "Material Category Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Material Category",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-010",
+      "module": "UOM Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "UOM",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-011",
+      "module": "Manufacturer Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Manufacturer",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-012",
+      "module": "Supplier Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Supplier Master",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-013",
+      "module": "Material List",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Material Master",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-01B.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-01B-MATERIAL-VERIFY-AND-SYNC"
+    },
+    {
+      "id": "UI-014",
+      "module": "Material Create/Edit",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Material Identity",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-01B.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-01B-MATERIAL-VERIFY-AND-SYNC"
+    },
+    {
+      "id": "UI-015",
+      "module": "Material Detail",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Material + Supplier Price",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-01B.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-01B-MATERIAL-VERIFY-AND-SYNC"
+    },
+    {
+      "id": "UI-016",
+      "module": "Supplier Detail",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Supplier + Price",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-02.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-02-SUPPLIER-DETAIL-PRICING"
+    },
+    {
+      "id": "UI-017",
+      "module": "Manual Bulk Price Edit",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Price Snapshot",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-02.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-02-SUPPLIER-DETAIL-PRICING"
+    },
+    {
+      "id": "UI-018",
+      "module": "Supplier Price Import",
+      "status": "PLACEHOLDER",
+      "relatedSpec": "Import Supplier Price",
+      "customerDemo": "Included as button",
+      "nextAction": "Import contract deferred.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "DEFERRED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-019",
+      "module": "User Management",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Authorization",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-03.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-03-USERS-ROLES-RBAC-UX"
+    },
+    {
+      "id": "UI-020",
+      "module": "Role & Permission",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Authorization",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-03.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-03-USERS-ROLES-RBAC-UX"
+    },
+    {
+      "id": "UI-021",
+      "module": "Cross-project Material Monitoring",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Project Monitoring",
+      "customerDemo": "Included",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-022",
+      "module": "Project Management Shell",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Project/BOM",
+      "customerDemo": "Included",
+      "nextAction": "Accepted under REQ-04A.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "UI_REVIEW_PASS",
+      "evidenceRequestId": "REQ-REMEDIATION-04A-PROJECT-DETAIL-SHELL"
+    },
+    {
+      "id": "UI-023",
+      "module": "Project Overview Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Project Monitoring",
+      "customerDemo": "Included",
+      "nextAction": "Source reviewed; manual cross-test not yet recorded.",
+      "implementationStatus": "COMPLETE",
+      "reviewStatus": "READY_FOR_MANUAL_REVIEW",
+      "evidenceRequestId": "REQ-REMEDIATION-04B-PROJECT-OVERVIEW"
+    },
+    {
+      "id": "UI-024",
+      "module": "BOM & Supplier Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "BOM/Supplier Recommendation",
+      "customerDemo": "Included",
+      "nextAction": "04C structure source-reviewed; 04D supplier semantics not started.",
+      "implementationStatus": "IN_PROGRESS",
+      "reviewStatus": "READY_FOR_MANUAL_REVIEW",
+      "evidenceRequestId": "REQ-REMEDIATION-04C-BOM-STRUCTURE"
+    },
+    {
+      "id": "UI-025",
+      "module": "Goods Receiving Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Goods Receiving",
+      "customerDemo": "Included",
+      "nextAction": "REQ-05 not started.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "PENDING",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-026",
+      "module": "Invoice Tab",
+      "status": "FROZEN_FOR_PROTOTYPE_V0",
+      "relatedSpec": "Invoice Monitoring",
+      "customerDemo": "Included",
+      "nextAction": "REQ-06 not started.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "PENDING",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-027",
+      "module": "Stock In Page",
+      "status": "PLACEHOLDER",
+      "relatedSpec": "Stock In/Out",
+      "customerDemo": "Placeholder",
+      "nextAction": "Inventory SPEC not frozen.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "DEFERRED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-028",
+      "module": "Stock Out Page",
+      "status": "PLACEHOLDER",
+      "relatedSpec": "Stock In/Out",
+      "customerDemo": "Placeholder",
+      "nextAction": "Inventory SPEC not frozen.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "DEFERRED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-029",
+      "module": "Inventory History Page",
+      "status": "PLACEHOLDER",
+      "relatedSpec": "Inventory",
+      "customerDemo": "Placeholder",
+      "nextAction": "Inventory SPEC not frozen.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "DEFERRED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-030",
+      "module": "Import Material",
+      "status": "PLACEHOLDER",
+      "relatedSpec": "Import Material",
+      "customerDemo": "Included as button",
+      "nextAction": "Import contract deferred.",
+      "implementationStatus": "PLACEHOLDER",
+      "reviewStatus": "DEFERRED",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-031",
+      "module": "Role Management Navigation",
+      "status": "UI_PENDING",
+      "relatedSpec": "Authorization",
+      "customerDemo": "Included",
+      "nextAction": "Navigation placement remains UI_PENDING.",
+      "implementationStatus": "PROTOTYPE_PRESENT",
+      "reviewStatus": "DEFERRED_TO_DEMO_REVIEW",
+      "evidenceRequestId": null
+    },
+    {
+      "id": "UI-032",
+      "module": "Mobile Optimization",
+      "status": "NOT_STARTED",
+      "relatedSpec": "Platform",
+      "customerDemo": "Excluded",
+      "nextAction": "Design baseline exists; implementation acceptance not tracked yet.",
+      "implementationStatus": "BASELINE_PRESENT",
+      "reviewStatus": "NOT_REVIEWED",
+      "evidenceRequestId": null
+    }
+  ],
+  "requests": [
+    {
+      "id": "REQ-REMEDIATION-01B-MATERIAL-VERIFY-AND-SYNC",
+      "title": "Material canonical model, UI and rolling price snapshot",
+      "domain": "Material",
+      "status": "UI_REVIEW_PASS",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PASS",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "67af6bff45f0906988474d33e2a0b920149d5dec",
+        "9c4f3f90d435b8b467009967b581775aaa07b686"
+      ],
+      "files": [
+        "src/domain/types.ts",
+        "src/context/AppContext.tsx",
+        "src/pages/materials/MaterialListPage.tsx",
+        "src/pages/materials/MaterialFormPage.tsx",
+        "src/pages/materials/MaterialDetailPage.tsx"
+      ],
+      "summary": "Material identity, list/form/detail, lifecycle, UOM lock and Previous/Current Price+Date accepted.",
+      "nextAction": "Closed. Reopen only on explicit customer/SPEC decision."
+    },
+    {
+      "id": "REQ-REMEDIATION-02-SUPPLIER-DETAIL-PRICING",
+      "title": "Supplier Detail and pricing UX",
+      "domain": "Supplier Pricing",
+      "status": "UI_REVIEW_PASS",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PASS",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "6d09516da658f3422009c72deeb61b171c887a50",
+        "3aa9b7ed4ce372164e7b7cfbfdb6d6379c3bcb04"
+      ],
+      "files": [
+        "src/pages/suppliers/SupplierDetailPage.tsx"
+      ],
+      "summary": "Two-tab Supplier Detail, governed price table, bulk edit and Preferred replacement confirmation accepted.",
+      "nextAction": "Preferred quick-action detail remains deferred to customer demo review."
+    },
+    {
+      "id": "REQ-REMEDIATION-03-USERS-ROLES-RBAC-UX",
+      "title": "Users, Roles and RBAC UX",
+      "domain": "Authorization",
+      "status": "UI_REVIEW_PASS",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PASS",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "c2cf7a8c59ad0e174469c9571d0f0c11337a2961",
+        "76d2e693da3aa15fdfa4e2494592b5c408d2485c",
+        "158e3015a584eced0287debf8986da80b4042b43"
+      ],
+      "files": [
+        "src/pages/admin/AdministrationPage.tsx",
+        "src/context/AppContext.tsx",
+        "src/domain/permissions.ts",
+        "src/domain/types.ts"
+      ],
+      "summary": "User CRUD, create-only password, reset password, role list/detail, UI/action permissions, protected Admin and default deny accepted.",
+      "nextAction": "Closed. Role navigation placement remains UI_PENDING."
+    },
+    {
+      "id": "REQ-REMEDIATION-04A-PROJECT-DETAIL-SHELL",
+      "title": "Project Detail persistent header and four-tab shell",
+      "domain": "Project Detail",
+      "status": "UI_REVIEW_PASS",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PASS",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "b7b28b72d6461b20dacf294c2935efc04fb7629c"
+      ],
+      "files": [
+        "src/pages/projects/ProjectDetailPage.tsx"
+      ],
+      "summary": "Persistent Project header and exact four tabs accepted.",
+      "nextAction": "Closed."
+    },
+    {
+      "id": "REQ-REMEDIATION-04B-PROJECT-OVERVIEW",
+      "title": "Project Overview",
+      "domain": "Project Detail",
+      "status": "READY_FOR_MANUAL_REVIEW",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PENDING",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "853e4cc858bcf4e1844ab2ef1f02a01a68059fd0",
+        "12c128cf055f0a7e559db2a6b70340eb215f0cc9"
+      ],
+      "files": [
+        "src/pages/projects/ProjectDetailPage.tsx"
+      ],
+      "summary": "KPI cards, material chart, line-based receiving summary, invoice summary and action-required section implemented.",
+      "nextAction": "Execute and record 10 manual cross-test cases."
+    },
+    {
+      "id": "REQ-REMEDIATION-04C-BOM-STRUCTURE",
+      "title": "BOM structure and canonical Material UI",
+      "domain": "Project BOM",
+      "status": "READY_FOR_MANUAL_REVIEW",
+      "implementationStatus": "COMPLETE",
+      "manualReviewStatus": "PENDING",
+      "sourceReviewStatus": "PASS",
+      "commits": [
+        "735279f3c6c85d5fe50a2299a3186b29b014faa9",
+        "5578301b14023b4b92081b94033214f19dcca16d"
+      ],
+      "files": [
+        "src/pages/projects/ProjectDetailPage.tsx"
+      ],
+      "summary": "Toolbar, canonical Material mapping, exact 15 columns, explicit edit mode and post-purchase boundary implemented.",
+      "nextAction": "Execute and record manual 04C cases; then start 04D."
+    },
+    {
+      "id": "REQ-REMEDIATION-04D-BOM-SUPPLIER-SELECTION",
+      "title": "BOM Cheapest / Preferred / Final Supplier semantics",
+      "domain": "Project BOM",
+      "status": "NOT_STARTED",
+      "implementationStatus": "NOT_STARTED",
+      "manualReviewStatus": "NOT_STARTED",
+      "sourceReviewStatus": "NOT_STARTED",
+      "commits": [],
+      "files": [
+        "src/pages/projects/ProjectDetailPage.tsx",
+        "src/context/AppContext.tsx"
+      ],
+      "summary": "Finalize supplier derivation and explicit Final Supplier selection.",
+      "nextAction": "Start only after 04B and 04C manual acceptance."
+    },
+    {
+      "id": "REQ-REMEDIATION-05-GOODS-RECEIVING-ALLOCATION",
+      "title": "Goods Receiving and Allocation",
+      "domain": "Receiving",
+      "status": "NOT_STARTED",
+      "implementationStatus": "NOT_STARTED",
+      "manualReviewStatus": "NOT_STARTED",
+      "sourceReviewStatus": "NOT_STARTED",
+      "commits": [],
+      "files": [],
+      "summary": "Partial receiving and Project/Warehouse allocation.",
+      "nextAction": "Start after REQ-04D UI_REVIEW_PASS."
+    },
+    {
+      "id": "REQ-REMEDIATION-06-INVOICE-MONITORING",
+      "title": "Project Invoice monitoring",
+      "domain": "Invoice",
+      "status": "NOT_STARTED",
+      "implementationStatus": "NOT_STARTED",
+      "manualReviewStatus": "NOT_STARTED",
+      "sourceReviewStatus": "NOT_STARTED",
+      "commits": [],
+      "files": [],
+      "summary": "Simple Supplier invoice-document monitoring with no accounting/payment semantics.",
+      "nextAction": "Start after REQ-05."
+    }
+  ],
+  "acceptanceSuites": [
+    {
+      "id": "SUITE-REQ-01B",
+      "requestId": "REQ-REMEDIATION-01B-MATERIAL-VERIFY-AND-SYNC",
+      "domain": "Material",
+      "status": "PASS",
+      "summary": {
+        "total": 5,
+        "pass": 5,
+        "fail": 0,
+        "pending": 0
+      },
+      "cases": [
+        {
+          "id": "MAT-01",
+          "title": "Tạo Material mới",
+          "expected": "Tạo thành công bằng Manufacturer + Model; không có SKU/Initial Stock.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit 9c4f3f90...",
+          "notes": ""
+        },
+        {
+          "id": "MAT-02",
+          "title": "Duplicate cùng Manufacturer + Model",
+          "expected": "Save bị block; cùng Model khác Manufacturer được phép.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "MAT-03",
+          "title": "Thay đổi Material identity",
+          "expected": "Edit Manufacturer/Model phải yêu cầu confirmation và vẫn kiểm tra duplicate.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "MAT-04",
+          "title": "UOM lock",
+          "expected": "Material referenced không được đổi UOM; unreferenced có thể đổi.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "MAT-05",
+          "title": "Rolling Supplier Price",
+          "expected": "Old Current/Date chuyển sang Previous/Date; new price/date trở thành Current.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "SUITE-REQ-02",
+      "requestId": "REQ-REMEDIATION-02-SUPPLIER-DETAIL-PRICING",
+      "domain": "Supplier Pricing",
+      "status": "PASS",
+      "summary": {
+        "total": 6,
+        "pass": 6,
+        "fail": 0,
+        "pending": 0
+      },
+      "cases": [
+        {
+          "id": "SUP-01",
+          "title": "Supplier Detail shell",
+          "expected": "Chỉ có Thông tin chung và Vật tư & Giá; không Invoice/VAT.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "SUP-02",
+          "title": "Manufacturer display",
+          "expected": "Cột Hãng hiển thị Manufacturer Name, không raw ID.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "SUP-03",
+          "title": "Bulk price rolling",
+          "expected": "Changed rows roll Previous/Current price and date correctly.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "SUP-04",
+          "title": "Bulk edit cancel",
+          "expected": "Cancel không persist thay đổi.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "SUP-05",
+          "title": "Multiple Preferred conflicts",
+          "expected": "Confirmation liệt kê mọi conflict trước save.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        },
+        {
+          "id": "SUP-06",
+          "title": "Preferred replacement invariant",
+          "expected": "Cancel giữ dữ liệu; Confirm giữ tối đa 1 Preferred per Material.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test.",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "SUITE-REQ-03",
+      "requestId": "REQ-REMEDIATION-03-USERS-ROLES-RBAC-UX",
+      "domain": "Authorization",
+      "status": "PASS",
+      "summary": {
+        "total": 12,
+        "pass": 12,
+        "fail": 0,
+        "pending": 0
+      },
+      "cases": [
+        {
+          "id": "RBAC-01",
+          "title": "New Role default deny",
+          "expected": "Role mới không có UI/action permission mặc định.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-02",
+          "title": "Role grants nothing initially",
+          "expected": "Gán Role mới chưa cấp quyền không tự mở module/action.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-03",
+          "title": "New User no auto Admin",
+          "expected": "Create User không preselect Role/Admin.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-04",
+          "title": "Role required",
+          "expected": "Save User không Role bị block.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-05",
+          "title": "Reset Password",
+          "expected": "Reset thành công và giữ nguyên username/fullName/Roles/status.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-06",
+          "title": "Administration view-only",
+          "expected": "manage_users=false/manage_roles=false => inspection-only.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-07",
+          "title": "manage_users only",
+          "expected": "User CRUD bật; Role management read-only.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-08",
+          "title": "manage_roles only",
+          "expected": "Role management bật; User CRUD read-only.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-09",
+          "title": "Role Detail tabs",
+          "expected": "Đúng Quyền giao diện / Quyền thao tác.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-10",
+          "title": "Multi-role union",
+          "expected": "Effective visibility/action = union.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-11",
+          "title": "Protected Admin",
+          "expected": "Full access, controls read-only, cannot delete/deactivate.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        },
+        {
+          "id": "RBAC-12",
+          "title": "Last active Admin",
+          "expected": "Không thể xóa/deactivate/remove Admin capability cuối cùng.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + source audit.",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "SUITE-REQ-04A",
+      "requestId": "REQ-REMEDIATION-04A-PROJECT-DETAIL-SHELL",
+      "domain": "Project Detail",
+      "status": "PASS",
+      "summary": {
+        "total": 8,
+        "pass": 8,
+        "fail": 0,
+        "pending": 0
+      },
+      "cases": [
+        {
+          "id": "04A-01",
+          "title": "Default Overview",
+          "expected": "Project Detail mở mặc định tab Tổng quan.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-02",
+          "title": "Persistent header",
+          "expected": "Code+Name, Customer, Start Date, Status hiển thị.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-03",
+          "title": "Edit permission",
+          "expected": "project.edit điều khiển Chỉnh sửa dự án.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-04",
+          "title": "Exact four tabs",
+          "expected": "Tổng quan / BOM & Nhà cung cấp / Nhận hàng / Hóa đơn đúng thứ tự.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-05",
+          "title": "Old tab removal",
+          "expected": "Không Vật tư BOM / Thông tin dự án / Hóa đơn NCC / Lịch sử kho.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-06",
+          "title": "Old semantics removal",
+          "expected": "Không PO, header Export BOM, VAT/accounting.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-07",
+          "title": "Deferred tabs",
+          "expected": "Nhận hàng và Hóa đơn giữ placeholder.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        },
+        {
+          "id": "04A-08",
+          "title": "Edit Project",
+          "expected": "Modal mở và lưu các field hiện tại.",
+          "status": "PASS",
+          "verifiedBy": "Product Owner",
+          "verifiedDate": "2026-08-29",
+          "evidence": "Manual prototype test + commit b7b28b72...",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "SUITE-REQ-04B",
+      "requestId": "REQ-REMEDIATION-04B-PROJECT-OVERVIEW",
+      "domain": "Project Overview",
+      "status": "PENDING_MANUAL_REVIEW",
+      "summary": {
+        "total": 10,
+        "pass": 0,
+        "fail": 0,
+        "pending": 10
+      },
+      "cases": [
+        {
+          "id": "04B-01",
+          "title": "04A shell preserved",
+          "expected": "Default Tổng quan và exact four tabs không thay đổi.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-02",
+          "title": "Four KPI cards",
+          "expected": "Tổng Material / Đã đủ / Đang mua / Còn thiếu đúng mock BOM.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-03",
+          "title": "Material status chart",
+          "expected": "Chart render với prototype status labels.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-04",
+          "title": "Line-based receiving summary",
+          "expected": "Không cộng quantity khác UOM; dùng counts per BOM line.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-05",
+          "title": "No mixed-UOM total",
+          "expected": "Không hiển thị tổng kiểu pcs + m.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-06",
+          "title": "Invoice document summary",
+          "expected": "Counts Đã có / Chưa có đúng Project Invoice data.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-07",
+          "title": "No accounting semantics",
+          "expected": "Không VAT/payment/AP.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-08",
+          "title": "Action Required",
+          "expected": "Chỉ hiển thị action items có thể liên kết an toàn với Project.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-09",
+          "title": "Completed project behavior",
+          "expected": "Project hoàn tất phản ánh fulfilled line counts.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04B-10",
+          "title": "Other tabs deferred",
+          "expected": "BOM/Receiving/Invoice không bị 04B triển khai vượt scope.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 12c128cf...; manual result not recorded.",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "SUITE-REQ-04C",
+      "requestId": "REQ-REMEDIATION-04C-BOM-STRUCTURE",
+      "domain": "Project BOM",
+      "status": "PENDING_MANUAL_REVIEW",
+      "summary": {
+        "total": 17,
+        "pass": 0,
+        "fail": 0,
+        "pending": 17
+      },
+      "cases": [
+        {
+          "id": "04C-01",
+          "title": "Initial read-only mode",
+          "expected": "BOM table mở ở chế độ chỉ xem.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-02",
+          "title": "Explicit Edit BOM mode",
+          "expected": "Edit BOM chỉ toggle edit mode, không chọn dòng tự động.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-03",
+          "title": "User-selected row",
+          "expected": "Pencil chỉ xuất hiện trong edit mode và user chọn row.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-04",
+          "title": "Search Model",
+          "expected": "Case-insensitive search theo Material.model.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-05",
+          "title": "Search Description",
+          "expected": "Case-insensitive search theo Material.description.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-06",
+          "title": "Category filter",
+          "expected": "Filter theo Material.categoryId.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-07",
+          "title": "Manufacturer filter",
+          "expected": "Filter theo Material.manufacturerId; hiển thị tên.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-08",
+          "title": "Supplier state filter",
+          "expected": "Chưa chọn/Đã chọn dựa trên finalSupplierId.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-09",
+          "title": "Import placeholder",
+          "expected": "Import BOM chỉ mở dialog Chờ chốt SPEC.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-10",
+          "title": "Exact 15 columns",
+          "expected": "Đúng thứ tự frozen CVF UI.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-11",
+          "title": "Canonical Material mapping",
+          "expected": "Không code/name/specs; dùng Category/Manufacturer/Model/Description/UOM.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-12",
+          "title": "Canonical BOM Qty",
+          "expected": "Dùng bomQty; không quantityEstimated/estimatedPrice.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-13",
+          "title": "Pre-purchase edit",
+          "expected": "User-selected NOT_PURCHASED row cho phép edit SL BOM.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-14",
+          "title": "Post-purchase boundary",
+          "expected": "Started row mở deferred SPEC message và không save.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-15",
+          "title": "Canonical wording",
+          "expected": "Không còn Số lượng dự toán; dùng Số lượng BOM.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-16",
+          "title": "No PO/Receiving embed",
+          "expected": "Không PO action, không fast receiving trong BOM.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        },
+        {
+          "id": "04C-17",
+          "title": "Exit edit mode",
+          "expected": "Kết thúc chỉnh sửa đưa table về read-only.",
+          "status": "PENDING",
+          "verifiedBy": "Cross-tester",
+          "verifiedDate": null,
+          "evidence": "Source reviewed at commit 5578301b...; manual result not recorded.",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "domain": "Prototype strategy",
+      "decision": "Split REQ-04 into 04A/04B/04C/04D to keep AI tasks bounded.",
+      "status": "CONFIRMED",
+      "impact": "Project Detail implementation proceeds in independently reviewable slices.",
+      "date": "2026-08-29",
+      "relatedUI": "Project Detail"
+    },
+    {
+      "id": "DEC-002",
+      "domain": "Preferred Supplier UX",
+      "decision": "Preferred quick-action detail will be reviewed after customer DEMO; it does not block current progress.",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "impact": "Keep 0..1 invariant; do not silently freeze quick-action UI.",
+      "date": "2026-08-29",
+      "relatedUI": "Material Detail / Supplier Pricing"
+    },
+    {
+      "id": "DEC-003",
+      "domain": "Receiving Overview KPI",
+      "decision": "Project Overview receiving summary uses BOM-line status counts, not cross-UOM quantity totals.",
+      "status": "CONFIRMED",
+      "impact": "Avoid invalid arithmetic such as pcs + m.",
+      "date": "2026-08-29",
+      "relatedUI": "Project Overview"
+    }
+  ],
+  "openItems": [
+    {
+      "id": "OPEN-001",
+      "domain": "BOM",
+      "question": "BOM có được chỉnh sau khi bắt đầu mua hàng và xử lý delta như thế nào?",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "reviewTrigger": "BOM/customer workflow review"
+    },
+    {
+      "id": "OPEN-002",
+      "domain": "BOM",
+      "question": "Có cần BOM version/revision chính thức không?",
+      "status": "PARTIAL",
+      "reviewTrigger": "Customer workflow review"
+    },
+    {
+      "id": "OPEN-003",
+      "domain": "Project",
+      "question": "Project status enum cuối gồm những trạng thái nào?",
+      "status": "NEEDS_DECISION",
+      "reviewTrigger": "Project UI review"
+    },
+    {
+      "id": "OPEN-004",
+      "domain": "Project",
+      "question": "Điều kiện xóa Project là gì?",
+      "status": "NEEDS_DECISION",
+      "reviewTrigger": "Project lifecycle review"
+    },
+    {
+      "id": "OPEN-005",
+      "domain": "Inventory",
+      "question": "Một kho hay nhiều kho?",
+      "status": "NOT_STARTED",
+      "reviewTrigger": "Inventory SPEC phase"
+    },
+    {
+      "id": "OPEN-006",
+      "domain": "Inventory",
+      "question": "Cách tính physical/available/reserved stock?",
+      "status": "NOT_STARTED",
+      "reviewTrigger": "Inventory SPEC phase"
+    },
+    {
+      "id": "OPEN-007",
+      "domain": "Import",
+      "question": "Schema/preview/validation Import Material?",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "reviewTrigger": "Import UI review"
+    },
+    {
+      "id": "OPEN-008",
+      "domain": "Import",
+      "question": "Schema/preview/validation Supplier Price Import?",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "reviewTrigger": "Supplier UI review"
+    },
+    {
+      "id": "OPEN-009",
+      "domain": "Invoice",
+      "question": "Partial invoice, adjustment hoặc payment status có cần không?",
+      "status": "PARTIAL",
+      "reviewTrigger": "Customer demo"
+    },
+    {
+      "id": "OPEN-010",
+      "domain": "Dashboard",
+      "question": "Công thức KPI production?",
+      "status": "PARTIAL",
+      "reviewTrigger": "Production SPEC phase"
+    },
+    {
+      "id": "OPEN-011",
+      "domain": "Authorization UI",
+      "question": "Role Management nằm trong User page hay nested route riêng?",
+      "status": "UI_PENDING",
+      "reviewTrigger": "Customer demo"
+    },
+    {
+      "id": "OPEN-012",
+      "domain": "Technical",
+      "question": "API, DB, Auth, Security, Backup, Deployment, NFR?",
+      "status": "NOT_STARTED",
+      "reviewTrigger": "Final technical SPEC"
+    },
+    {
+      "id": "OPEN-013",
+      "domain": "Preferred Supplier UX",
+      "question": "Material Detail quick Preferred action giữ, bỏ hay chuyển vào governed edit flow?",
+      "status": "DEFERRED_TO_PROTOTYPE_REVIEW",
+      "reviewTrigger": "Customer demo"
+    }
+  ],
+  "roadmap": [
+    {
+      "id": "PHASE-01",
+      "name": "Governance + CVF Baseline",
+      "status": "PASS",
+      "purpose": "Establish protected CVF sources and authority boundaries.",
+      "exitCriteria": [
+        "Four protected files exist",
+        "Production authority remains NOT_AUTHORIZED"
+      ],
+      "mainOutputs": [
+        "CVF_GOVERNANCE.md",
+        "roadmap.md",
+        "CVF_SPEC.md",
+        "CVF_UI.md"
+      ],
+      "currentBlockers": [],
+      "nextAllowedMove": "Continue prototype evidence loop."
+    },
+    {
+      "id": "PHASE-02",
+      "name": "Material & Supplier Pricing",
+      "status": "PASS",
+      "purpose": "Validate canonical Material and Supplier Price workflows.",
+      "exitCriteria": [
+        "REQ-01B pass",
+        "REQ-02 pass"
+      ],
+      "mainOutputs": [
+        "Material UI accepted",
+        "Supplier Price UI accepted"
+      ],
+      "currentBlockers": [],
+      "nextAllowedMove": "Closed unless SPEC reopened."
+    },
+    {
+      "id": "PHASE-03",
+      "name": "Users / Roles / RBAC",
+      "status": "PASS",
+      "purpose": "Validate prototype authorization UX.",
+      "exitCriteria": [
+        "REQ-03 pass"
+      ],
+      "mainOutputs": [
+        "User Management",
+        "Role Detail",
+        "Action/UI permission matrices"
+      ],
+      "currentBlockers": [],
+      "nextAllowedMove": "Closed; navigation detail deferred."
+    },
+    {
+      "id": "PHASE-04",
+      "name": "Project Detail + BOM",
+      "status": "IN_PROGRESS",
+      "purpose": "Complete Project shell, Overview, BOM structure and supplier selection.",
+      "exitCriteria": [
+        "04A UI_REVIEW_PASS",
+        "04B UI_REVIEW_PASS",
+        "04C UI_REVIEW_PASS",
+        "04D UI_REVIEW_PASS"
+      ],
+      "mainOutputs": [
+        "Four-tab Project Detail",
+        "Overview",
+        "BOM supplier decision UX"
+      ],
+      "currentBlockers": [
+        "04B manual results not recorded",
+        "04C manual results not recorded",
+        "04D not started"
+      ],
+      "nextAllowedMove": "Manual cross-test 04B/04C, then implement 04D."
+    },
+    {
+      "id": "PHASE-05",
+      "name": "Goods Receiving & Allocation",
+      "status": "READY",
+      "purpose": "Implement partial receiving and allocation invariants.",
+      "entryCriteria": [
+        "04D UI_REVIEW_PASS"
+      ],
+      "exitCriteria": [
+        "Receiving invariants manually pass"
+      ],
+      "mainOutputs": [
+        "Receiving tab",
+        "Allocation modal"
+      ],
+      "currentBlockers": [
+        "Waiting for Phase 04"
+      ],
+      "nextAllowedMove": "REQ-05 after 04D."
+    },
+    {
+      "id": "PHASE-06",
+      "name": "Invoice Monitoring",
+      "status": "NOT_STARTED",
+      "purpose": "Simple supplier invoice-document monitoring.",
+      "entryCriteria": [
+        "REQ-05 accepted"
+      ],
+      "exitCriteria": [
+        "No VAT/payment/accounting semantics"
+      ],
+      "mainOutputs": [
+        "Invoice tab"
+      ],
+      "currentBlockers": [
+        "Waiting for Receiving"
+      ],
+      "nextAllowedMove": "REQ-06."
+    },
+    {
+      "id": "PHASE-07",
+      "name": "Integrated Demo & Cross-Test",
+      "status": "NOT_STARTED",
+      "purpose": "Cross-screen acceptance and customer-demo stabilization.",
+      "entryCriteria": [
+        "Core demo domains accepted"
+      ],
+      "exitCriteria": [
+        "Cross-test complete",
+        "Open decisions recorded",
+        "Stable handoff demo"
+      ],
+      "mainOutputs": [
+        "Customer demo build",
+        "Final acceptance evidence"
+      ],
+      "currentBlockers": [
+        "Project/BOM/Receiving/Invoice incomplete"
+      ],
+      "nextAllowedMove": "After REQ-06."
+    },
+    {
+      "id": "PHASE-08",
+      "name": "Final SPEC + Developer Handoff",
+      "status": "NOT_STARTED",
+      "purpose": "Convert accepted UI evidence into final business/technical work orders.",
+      "entryCriteria": [
+        "Customer Product Acceptance"
+      ],
+      "exitCriteria": [
+        "Final SPEC approved",
+        "Work Orders authorized"
+      ],
+      "mainOutputs": [
+        "Final SPEC",
+        "Developer work orders",
+        "Production architecture decisions"
+      ],
+      "currentBlockers": [
+        "Production authority NOT_AUTHORIZED"
+      ],
+      "nextAllowedMove": "Only after customer acceptance."
+    }
+  ],
+  "handoff": {
+    "purpose": "Allow another AI model or developer to resume without reconstructing the full conversation.",
+    "readProtocol": [
+      "Read CVF_TRACKING.json first.",
+      "Verify repositories.application.headCommit against actual main HEAD.",
+      "If HEAD matches, use requests/currentState/acceptanceSuites to determine current work and accepted evidence.",
+      "Read only the protected CVF sections listed in requiredReads for the active request.",
+      "Inspect only the affected source files listed in the active request.",
+      "Do not reopen accepted scopes unless a concrete regression or SPEC conflict is found.",
+      "After implementation, update request status, commit evidence, acceptance cases and changelog in this file."
+    ],
+    "requiredReads": [
+      {
+        "file": "CVF_GOVERNANCE.md",
+        "sections": [
+          "Protection and authority rules"
+        ],
+        "reason": "Always required before source modification."
+      },
+      {
+        "file": "roadmap.md",
+        "sections": [
+          "Stage 6 — Project Shell + BOM & Supplier",
+          "Current Open Gates"
+        ],
+        "reason": "Current phase/gates."
+      },
+      {
+        "file": "CVF_SPEC.md",
+        "sections": [
+          "Supplier Recommendation in BOM",
+          "BOM",
+          "Project Material Monitoring"
+        ],
+        "reason": "Required for REQ-04D."
+      },
+      {
+        "file": "CVF_UI.md",
+        "sections": [
+          "Project Operational Detail",
+          "Project Overview Tab",
+          "BOM & Supplier Tab"
+        ],
+        "reason": "Required for REQ-04D and regression verification."
+      }
+    ],
+    "activeSourceFiles": [
+      "src/pages/projects/ProjectDetailPage.tsx",
+      "src/context/AppContext.tsx",
+      "src/domain/types.ts",
+      "src/data/mockData.ts"
+    ],
+    "resumeInstruction": "First record manual results for SUITE-REQ-04B and SUITE-REQ-04C. If both PASS, mark requests 04B/04C UI_REVIEW_PASS and begin REQ-04D. Do not start Receiving before 04D passes.",
+    "stopConditions": [
+      "Repository HEAD does not match tracker.",
+      "Protected file content changed without authorization.",
+      "Implementation requires price-lock, BOM revision, or post-purchase reconciliation semantics not frozen in CVF.",
+      "A previously accepted scope regresses."
+    ]
+  },
+  "changelog": [
+    {
+      "id": "LOG-20260829-04C-FIX",
+      "timestamp": "2026-08-29T06:38:50Z",
+      "summary": "REQ-04C edit-mode correction source-reviewed",
+      "source": "GitHub commit 5578301b14023b4b92081b94033214f19dcca16d",
+      "details": "Explicit BOM edit mode; no auto row selection; canonical BOM quantity wording."
+    },
+    {
+      "id": "LOG-20260829-04C",
+      "timestamp": "2026-08-29T05:49:51Z",
+      "summary": "REQ-04C BOM structure implemented",
+      "source": "GitHub commit 735279f3c6c85d5fe50a2299a3186b29b014faa9",
+      "details": "Exact 15-column BOM structure and canonical Material mapping."
+    },
+    {
+      "id": "LOG-20260829-04B-FIX",
+      "timestamp": "2026-08-29T05:37:24Z",
+      "summary": "REQ-04B receiving summary semantics corrected",
+      "source": "GitHub commit 12c128cf055f0a7e559db2a6b70340eb215f0cc9",
+      "details": "Removed cross-UOM quantity aggregation; line-based status summary."
+    },
+    {
+      "id": "LOG-20260829-04B",
+      "timestamp": "2026-08-29T05:31:00Z",
+      "summary": "REQ-04B Project Overview implemented",
+      "source": "GitHub commit 853e4cc858bcf4e1844ab2ef1f02a01a68059fd0",
+      "details": "KPI cards, chart, summaries and action-required section."
+    },
+    {
+      "id": "LOG-20260829-04A",
+      "timestamp": "2026-08-29T05:22:26Z",
+      "summary": "REQ-04A UI_REVIEW_PASS",
+      "source": "GitHub commit b7b28b72d6461b20dacf294c2935efc04fb7629c + Product Owner manual test",
+      "details": "Persistent Project header and four-tab shell accepted."
+    },
+    {
+      "id": "LOG-20260829-03",
+      "timestamp": "2026-08-29T04:32:19Z",
+      "summary": "REQ-03 UI_REVIEW_PASS",
+      "source": "GitHub commit 158e3015a584eced0287debf8986da80b4042b43 + Product Owner 12-case test",
+      "details": "Users/Roles/RBAC accepted."
+    },
+    {
+      "id": "LOG-20260829-02",
+      "timestamp": "2026-08-29T03:32:03Z",
+      "summary": "REQ-02 UI_REVIEW_PASS",
+      "source": "GitHub commits 6d09516d... and 3aa9b7ed... + Product Owner 6-case test",
+      "details": "Supplier Detail and Pricing accepted."
+    },
+    {
+      "id": "LOG-20260829-01B",
+      "timestamp": "2026-08-29T02:50:42Z",
+      "summary": "REQ-01B UI_REVIEW_PASS",
+      "source": "GitHub commits 67af6bff... and 9c4f3f90... + Product Owner 5-case test",
+      "details": "Material remediation accepted."
+    }
+  ]
+}
