@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   ChevronRight,
+  Search,
+  Upload,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -32,8 +34,9 @@ import { FormField } from '../../components/forms/FormField';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { SpecBadge } from '../../components/common/SpecBadge';
-import { formatDate } from '../../domain/mockRules';
-import { Project, ProjectStatus } from '../../domain/types';
+import { PlaceholderDialog } from '../../components/dialogs/PlaceholderDialog';
+import { formatDate, formatCurrency, formatQuantity } from '../../domain/mockRules';
+import { Project, ProjectStatus, ProjectBOMItem } from '../../domain/types';
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -44,8 +47,13 @@ export const ProjectDetailPage: React.FC = () => {
     boms,
     invoices,
     suppliers,
+    categories,
+    manufacturers,
+    materials,
+    uoms,
     actionItems,
     saveProject,
+    updateBOMItemQuantity,
     addToast,
     canDo,
   } = useApp();
@@ -66,8 +74,25 @@ export const ProjectDetailPage: React.FC = () => {
   const [editFormData, setEditFormData] = useState<Partial<Project>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Gated action: project.edit permission
+  // Gated permissions
   const canEditProject = canDo('project', 'edit');
+  const canImportBOM = canDo('bom', 'import');
+  const canEditBOM = canDo('bom', 'edit');
+
+  // BOM Tab Toolbar Filters State
+  const [bomSearch, setBomSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedManufacturer, setSelectedManufacturer] = useState('ALL');
+  const [supplierStatusFilter, setSupplierStatusFilter] = useState<'ALL' | 'UNASSIGNED' | 'ASSIGNED'>('ALL');
+
+  // Placeholder dialogs
+  const [isImportPlaceholderOpen, setIsImportPlaceholderOpen] = useState(false);
+  const [isPostPurchasePlaceholderOpen, setIsPostPurchasePlaceholderOpen] = useState(false);
+
+  // Edit BOM Item Modal
+  const [editingBOMItem, setEditingBOMItem] = useState<ProjectBOMItem | null>(null);
+  const [editBOMQty, setEditBOMQty] = useState<number>(1);
+  const [editBOMError, setEditBOMError] = useState<string | null>(null);
 
   useEffect(() => {
     if (project) {
@@ -79,6 +104,42 @@ export const ProjectDetailPage: React.FC = () => {
   const projectBOMs = useMemo(() => {
     return boms.filter((b) => b.projectId === project?.id);
   }, [boms, project?.id]);
+
+  // Filtered BOM Items for Tab 2
+  const filteredBOMs = useMemo(() => {
+    return projectBOMs.filter((b) => {
+      const mat = materials.find((m) => m.id === b.materialId);
+      if (!mat) return false;
+
+      // 1. Search against Material.model and Material.description (case-insensitive)
+      if (bomSearch.trim()) {
+        const query = bomSearch.toLowerCase().trim();
+        const modelMatch = mat.model?.toLowerCase().includes(query);
+        const descMatch = mat.description?.toLowerCase().includes(query);
+        if (!modelMatch && !descMatch) return false;
+      }
+
+      // 2. Category filter
+      if (selectedCategory !== 'ALL' && mat.categoryId !== selectedCategory) {
+        return false;
+      }
+
+      // 3. Manufacturer filter
+      if (selectedManufacturer !== 'ALL' && mat.manufacturerId !== selectedManufacturer) {
+        return false;
+      }
+
+      // 4. Supplier status filter: Chưa chọn NCC (finalSupplierId == null) vs Đã chọn NCC (finalSupplierId != null)
+      if (supplierStatusFilter === 'UNASSIGNED' && b.finalSupplierId !== null) {
+        return false;
+      }
+      if (supplierStatusFilter === 'ASSIGNED' && b.finalSupplierId === null) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [projectBOMs, materials, bomSearch, selectedCategory, selectedManufacturer, supplierStatusFilter]);
 
   // Project Invoices
   const projectInvoices = useMemo(() => {
@@ -189,6 +250,64 @@ export const ProjectDetailPage: React.FC = () => {
     } else {
       setFormError(res.message || 'Không thể lưu dự án.');
     }
+  };
+
+  // Handler for Import BOM button (Placeholder only)
+  const handleImportBOMClick = () => {
+    if (!canImportBOM) {
+      addToast('error', 'Bạn không có quyền import BOM.');
+      return;
+    }
+    setIsImportPlaceholderOpen(true);
+  };
+
+  // Handler for Edit BOM toolbar / row click
+  const handleEditBOMRow = (item: ProjectBOMItem) => {
+    if (!canEditBOM) {
+      addToast('error', 'Bạn không có quyền chỉnh sửa BOM.');
+      return;
+    }
+
+    // Post-purchase boundary check:
+    // If purchasing or receiving has started (status !== 'NOT_PURCHASED' or projectReceivedQty > 0)
+    const isStarted = item.status !== 'NOT_PURCHASED' || (item.projectReceivedQty && item.projectReceivedQty > 0);
+    if (isStarted) {
+      setIsPostPurchasePlaceholderOpen(true);
+      return;
+    }
+
+    // Pre-purchase: open bounded SL BOM edit modal
+    setEditingBOMItem(item);
+    setEditBOMQty(item.bomQty);
+    setEditBOMError(null);
+  };
+
+  const handleToolbarEditBOMClick = () => {
+    if (!canEditBOM) {
+      addToast('error', 'Bạn không có quyền chỉnh sửa BOM.');
+      return;
+    }
+    if (filteredBOMs.length === 0) {
+      addToast('warning', 'Không có dòng BOM nào để chỉnh sửa.');
+      return;
+    }
+    // Edit the first row in the current filtered list
+    handleEditBOMRow(filteredBOMs[0]);
+  };
+
+  const handleSaveBOMQty = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditBOMError(null);
+
+    if (!editingBOMItem) return;
+    if (isNaN(editBOMQty) || editBOMQty <= 0) {
+      setEditBOMError('Số lượng BOM phải là số dương lớn hơn 0.');
+      return;
+    }
+
+    updateBOMItemQuantity(editingBOMItem.id, editBOMQty);
+    addToast('success', 'Đã cập nhật số lượng BOM thành công.');
+    setEditingBOMItem(null);
   };
 
   if (!project) {
@@ -635,16 +754,230 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: BOM & NHÀ CUNG CẤP */}
+      {/* TAB 2: BOM & NHÀ CUNG CẤP (REQ-04C CANONICAL BOM STRUCTURE) */}
       {activeTab === 'bom' && (
-        <div className="bg-white border border-slate-200 rounded-lg p-8 shadow-2xs text-center space-y-3">
-          <Layers className="w-10 h-10 text-blue-500 mx-auto" />
-          <p className="text-sm font-semibold text-slate-700">
-            Nội dung BOM & Nhà cung cấp sẽ được hoàn thiện trong bước REQ-04C/04D.
-          </p>
-          <p className="text-xs text-slate-500">
-            Khu vực quản lý danh mục BOM dự án, so sánh đơn giá và lựa chọn nhà cung cấp.
-          </p>
+        <div className="space-y-4">
+          {/* Exact Toolbar */}
+          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[300px]">
+              {/* Search Model / Description */}
+              <div className="relative min-w-[220px] max-w-xs flex-1">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm Model / Mô tả..."
+                  value={bomSearch}
+                  onChange={(e) => setBomSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                />
+              </div>
+
+              {/* Category Filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">Tất cả nhóm</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Manufacturer Filter */}
+              <select
+                value={selectedManufacturer}
+                onChange={(e) => setSelectedManufacturer(e.target.value)}
+                className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">Tất cả hãng</option>
+                {manufacturers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Supplier Status Filter */}
+              <select
+                value={supplierStatusFilter}
+                onChange={(e) => setSupplierStatusFilter(e.target.value as any)}
+                className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">Tất cả trạng thái NCC</option>
+                <option value="UNASSIGNED">Chưa chọn NCC</option>
+                <option value="ASSIGNED">Đã chọn NCC</option>
+              </select>
+            </div>
+
+            {/* Action Buttons in Toolbar */}
+            <div className="flex items-center gap-2">
+              {canImportBOM && (
+                <button
+                  type="button"
+                  onClick={handleImportBOMClick}
+                  className="px-3 py-1.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs"
+                >
+                  <Upload className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Import BOM</span>
+                </button>
+              )}
+
+              {canEditBOM && (
+                <button
+                  type="button"
+                  onClick={handleToolbarEditBOMClick}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit BOM</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Exact 15-Column BOM Table */}
+          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold whitespace-nowrap">
+                    {/* Exact Column 1 */}
+                    <th className="p-3">Nhóm vật tư</th>
+                    {/* Exact Column 2 */}
+                    <th className="p-3">Hãng</th>
+                    {/* Exact Column 3 */}
+                    <th className="p-3">Model</th>
+                    {/* Exact Column 4 */}
+                    <th className="p-3">Mô tả</th>
+                    {/* Exact Column 5 */}
+                    <th className="p-3 text-right">SL BOM</th>
+                    {/* Exact Column 6 */}
+                    <th className="p-3">ĐVT</th>
+                    {/* Exact Column 7 */}
+                    <th className="p-3 text-right">Giá thấp nhất</th>
+                    {/* Exact Column 8 */}
+                    <th className="p-3">NCC giá thấp nhất</th>
+                    {/* Exact Column 9 */}
+                    <th className="p-3">NCC ưu tiên</th>
+                    {/* Exact Column 10 */}
+                    <th className="p-3 text-right">Giá ưu tiên</th>
+                    {/* Exact Column 11 */}
+                    <th className="p-3">NCC cuối cùng</th>
+                    {/* Exact Column 12 */}
+                    <th className="p-3 text-right">Đơn giá cuối</th>
+                    {/* Exact Column 13 */}
+                    <th className="p-3 text-right">Thành tiền</th>
+                    {/* Exact Column 14 */}
+                    <th className="p-3 text-center">Trạng thái</th>
+                    {/* Exact Column 15 */}
+                    <th className="p-3 text-center">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredBOMs.length === 0 ? (
+                    <tr>
+                      <td colSpan={15} className="p-8 text-center text-slate-500">
+                        Không tìm thấy vật tư BOM nào phù hợp với bộ lọc.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBOMs.map((b) => {
+                      const mat = materials.find((m) => m.id === b.materialId);
+                      const cat = categories.find((c) => c.id === mat?.categoryId);
+                      const mfg = manufacturers.find((m) => m.id === mat?.manufacturerId);
+                      const uom = uoms.find((u) => u.id === mat?.uomId);
+                      const cheapestSup = suppliers.find((s) => s.id === b.cheapestSupplierId);
+                      const prefSup = suppliers.find((s) => s.id === b.preferredSupplierId);
+                      const finalSup = suppliers.find((s) => s.id === b.finalSupplierId);
+
+                      return (
+                        <tr key={b.id} className="hover:bg-slate-50/70 transition">
+                          {/* 1. Nhóm vật tư */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap">{cat?.name || '—'}</td>
+
+                          {/* 2. Hãng */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap">{mfg?.name || '—'}</td>
+
+                          {/* 3. Model */}
+                          <td className="p-3 font-semibold text-slate-900 whitespace-nowrap">{mat?.model || '—'}</td>
+
+                          {/* 4. Mô tả */}
+                          <td className="p-3 text-slate-600 max-w-[220px] truncate" title={mat?.description}>
+                            {mat?.description || '—'}
+                          </td>
+
+                          {/* 5. SL BOM */}
+                          <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap">
+                            {formatQuantity(b.bomQty)}
+                          </td>
+
+                          {/* 6. ĐVT */}
+                          <td className="p-3 text-slate-600 whitespace-nowrap">{uom?.code || '—'}</td>
+
+                          {/* 7. Giá thấp nhất */}
+                          <td className="p-3 text-right text-slate-700 whitespace-nowrap">
+                            {b.cheapestPrice ? formatCurrency(b.cheapestPrice) : '—'}
+                          </td>
+
+                          {/* 8. NCC giá thấp nhất */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap">{cheapestSup?.name || '—'}</td>
+
+                          {/* 9. NCC ưu tiên */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap">{prefSup?.name || '—'}</td>
+
+                          {/* 10. Giá ưu tiên */}
+                          <td className="p-3 text-right text-slate-700 whitespace-nowrap">
+                            {b.preferredPrice ? formatCurrency(b.preferredPrice) : '—'}
+                          </td>
+
+                          {/* 11. NCC cuối cùng */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap">{finalSup?.name || '—'}</td>
+
+                          {/* 12. Đơn giá cuối */}
+                          <td className="p-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                            {b.finalUnitPrice ? formatCurrency(b.finalUnitPrice) : '—'}
+                          </td>
+
+                          {/* 13. Thành tiền */}
+                          <td className="p-3 text-right font-bold text-blue-700 whitespace-nowrap">
+                            {b.totalAmount ? formatCurrency(b.totalAmount) : '—'}
+                          </td>
+
+                          {/* 14. Trạng thái */}
+                          <td className="p-3 text-center whitespace-nowrap">
+                            <StatusBadge status={b.status} type="bom" />
+                          </td>
+
+                          {/* 15. Thao tác */}
+                          <td className="p-3 text-center whitespace-nowrap">
+                            {canEditBOM ? (
+                              <button
+                                type="button"
+                                onClick={() => handleEditBOMRow(b)}
+                                className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                                title="Chỉnh sửa SL BOM"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Table Footer count */}
+            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+              <span>Hiển thị {filteredBOMs.length} / {projectBOMs.length} dòng vật tư BOM</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -789,6 +1122,106 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit BOM Qty Modal (Bounded Pre-Purchase Edit) */}
+      {editingBOMItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Chỉnh sửa SL BOM</h3>
+                <p className="text-xs text-slate-500">Cập nhật số lượng dự toán cho dòng vật tư BOM</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBOMItem(null)}
+                className="p-1 rounded text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBOMQty}>
+              <div className="p-5 space-y-3.5 text-xs">
+                {editBOMError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded text-rose-700 text-xs">
+                    {editBOMError}
+                  </div>
+                )}
+
+                {(() => {
+                  const m = materials.find((mat) => mat.id === editingBOMItem.materialId);
+                  const c = categories.find((cat) => cat.id === m?.categoryId);
+                  const mfg = manufacturers.find((mf) => mf.id === m?.manufacturerId);
+                  const u = uoms.find((uo) => uo.id === m?.uomId);
+
+                  return (
+                    <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1 text-slate-700">
+                      <p className="font-semibold text-slate-900">
+                        {m?.model || '—'}
+                      </p>
+                      <p className="text-[11px] text-slate-500">{m?.description || '—'}</p>
+                      <div className="pt-1 flex items-center gap-3 text-[11px] text-slate-600">
+                        <span>Nhóm: <strong>{c?.name || '—'}</strong></span>
+                        <span>Hãng: <strong>{mfg?.name || '—'}</strong></span>
+                        <span>ĐVT: <strong>{u?.code || '—'}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <FormField label="Số lượng BOM" required>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={editBOMQty}
+                    onChange={(e) => setEditBOMQty(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Nhập số lượng BOM..."
+                  />
+                </FormField>
+              </div>
+
+              <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBOMItem(null)}
+                  className="px-3.5 py-1.5 border border-slate-300 text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50 transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded flex items-center gap-1.5 transition"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu số lượng</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import BOM Placeholder Modal */}
+      <PlaceholderDialog
+        isOpen={isImportPlaceholderOpen}
+        title="Import BOM"
+        capabilityName="Quản lý BOM dự án"
+        description="Template, mapping, preview, duplicate handling và workflow Import BOM chưa được chốt trong SPEC. Chờ chốt SPEC."
+        onClose={() => setIsImportPlaceholderOpen(false)}
+      />
+
+      {/* Post-Purchase BOM Edit Placeholder Modal */}
+      <PlaceholderDialog
+        isOpen={isPostPurchasePlaceholderOpen}
+        title="Chỉnh sửa BOM"
+        capabilityName="Thay đổi BOM sau khi bắt đầu mua hàng"
+        description="Behavior chỉnh BOM sau khi bắt đầu mua hàng chưa được chốt trong SPEC. Chờ chốt SPEC."
+        onClose={() => setIsPostPurchasePlaceholderOpen(false)}
+      />
     </div>
   );
 };
