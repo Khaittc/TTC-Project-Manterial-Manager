@@ -54,7 +54,11 @@ export const AdministrationPage: React.FC = () => {
     setCurrentUserId,
     currentUserId,
     addToast,
+    canDo,
   } = useApp();
+
+  const canManageUsers = canDo('administration', 'manage_users');
+  const canManageRoles = canDo('administration', 'manage_roles');
 
   const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
 
@@ -100,7 +104,7 @@ export const AdministrationPage: React.FC = () => {
         username: '',
         fullName: '',
         password: '',
-        roleIds: [roles[0]?.id || ''],
+        roleIds: [],
         status: 'ACTIVE',
       },
     });
@@ -121,10 +125,14 @@ export const AdministrationPage: React.FC = () => {
       addToast('error', 'Mật khẩu là bắt buộc khi tạo mới.');
       return;
     }
+    if (!userModal.user.roleIds || userModal.user.roleIds.length === 0) {
+      addToast('error', 'Vui lòng gán ít nhất một vai trò.');
+      return;
+    }
 
     const res = saveUser({
       ...userModal.user,
-      roleIds: userModal.user.roleIds || [roles[0]?.id],
+      roleIds: userModal.user.roleIds,
       status: userModal.user.status || 'ACTIVE',
     });
 
@@ -304,14 +312,16 @@ export const AdministrationPage: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenAddUser}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Thêm người dùng</span>
-            </button>
+            {canManageUsers && (
+              <button
+                type="button"
+                onClick={handleOpenAddUser}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm người dùng</span>
+              </button>
+            )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
@@ -349,24 +359,28 @@ export const AdministrationPage: React.FC = () => {
                         <StatusBadge status={u.status} type="master" />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <ActionIconBtn
-                            icon={Key}
-                            label="Đặt lại mật khẩu"
-                            onClick={() => setResetPasswordModal({ userId: u.id, newPassword: '', confirmPassword: '' })}
-                          />
-                          <ActionIconBtn
-                            icon={Pencil}
-                            label="Sửa thông tin"
-                            onClick={() => handleOpenEditUser(u)}
-                          />
-                          <ActionIconBtn
-                            icon={Trash2}
-                            label="Xóa tài khoản"
-                            variant="danger"
-                            onClick={() => setDeleteConfirm({ isOpen: true, userId: u.id })}
-                          />
-                        </div>
+                        {canManageUsers ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <ActionIconBtn
+                              icon={Key}
+                              label="Đặt lại mật khẩu"
+                              onClick={() => setResetPasswordModal({ userId: u.id, newPassword: '', confirmPassword: '' })}
+                            />
+                            <ActionIconBtn
+                              icon={Pencil}
+                              label="Sửa thông tin"
+                              onClick={() => handleOpenEditUser(u)}
+                            />
+                            <ActionIconBtn
+                              icon={Trash2}
+                              label="Xóa tài khoản"
+                              variant="danger"
+                              onClick={() => setDeleteConfirm({ isOpen: true, userId: u.id })}
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-[10px] uppercase font-semibold">Chỉ xem</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -387,14 +401,16 @@ export const AdministrationPage: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenAddRole}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Thêm vai trò</span>
-            </button>
+            {canManageRoles && (
+              <button
+                type="button"
+                onClick={handleOpenAddRole}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm vai trò</span>
+              </button>
+            )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
@@ -438,7 +454,7 @@ export const AdministrationPage: React.FC = () => {
                           >
                             Xem chi tiết
                           </button>
-                          {!r.isSystemProtected && (
+                          {!r.isSystemProtected && canManageRoles && (
                             <>
                               <ActionIconBtn
                                 icon={Pencil}
@@ -532,11 +548,11 @@ export const AdministrationPage: React.FC = () => {
                         {groupMenus.map(menu => {
                           const hasAccess = selectedRole.isSystemProtected || (selectedRole.uiVisibility || []).includes(menu.key);
                           return (
-                            <label key={menu.key} className={`flex items-center gap-2 text-xs ${selectedRole.isSystemProtected ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50 rounded p-1 -ml-1'}`}>
+                            <label key={menu.key} className={`flex items-center gap-2 text-xs ${(selectedRole.isSystemProtected || !canManageRoles) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50 rounded p-1 -ml-1'}`}>
                               <input
                                 type="checkbox"
                                 checked={hasAccess}
-                                disabled={selectedRole.isSystemProtected}
+                                disabled={selectedRole.isSystemProtected || !canManageRoles}
                                 onChange={() => handleToggleUIPermission(menu.key)}
                                 className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-0 disabled:opacity-50"
                               />
@@ -580,11 +596,11 @@ export const AdministrationPage: React.FC = () => {
                                 {domainConfig.actions.map(action => {
                                   const hasAccess = selectedRole.isSystemProtected || Boolean(roleDomainPerms[action]);
                                   return (
-                                    <label key={action} className={`flex items-center gap-1.5 ${selectedRole.isSystemProtected ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:text-blue-700'}`}>
+                                    <label key={action} className={`flex items-center gap-1.5 ${(selectedRole.isSystemProtected || !canManageRoles) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:text-blue-700'}`}>
                                       <input 
                                         type="checkbox"
                                         checked={hasAccess}
-                                        disabled={selectedRole.isSystemProtected}
+                                        disabled={selectedRole.isSystemProtected || !canManageRoles}
                                         onChange={() => handleToggleActionPermission(domainConfig.domain, action)}
                                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-0 disabled:opacity-50"
                                       />
