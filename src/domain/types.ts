@@ -171,6 +171,7 @@ export interface User {
   status: MasterStatus;
   email?: string;
   avatar?: string;
+  password?: string;
 }
 
 export interface ActionRequiredItem {

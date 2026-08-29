@@ -113,6 +113,7 @@ interface AppContextType {
   saveRole: (role: Partial<Role>) => { success: boolean; message?: string };
   deleteRole: (id: string) => { success: boolean; message?: string };
   updateRolePermissions: (roleId: string, allowedMenus: MenuKey[]) => void;
+  updateRoleActionPermissions: (roleId: string, actionPermissions: Role['actionPermissions']) => void;
 
   // Helper check
   canDo: (domain: keyof Role['actionPermissions'], action: string) => boolean;
@@ -986,10 +987,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               roleIds: data.roleIds!,
               status: data.status || u.status,
               email: data.email || u.email,
+              password: data.password || u.password,
             }
           : u
       );
-      addToast('success', `Đã cập nhật người dùng ${data.fullName}.`);
     } else {
       const newUser: User = {
         id: `USR-${Date.now()}`,
@@ -998,8 +999,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         roleIds: data.roleIds!,
         status: data.status || 'ACTIVE',
         email: data.email?.trim() || `${usernameLower}@ttc-material.vn`,
+        password: data.password,
       };
       next = [...users, newUser];
+    }
+
+    const activeAdmins = next.filter((u) => u.status === 'ACTIVE' && u.roleIds?.includes('ROLE-ADMIN'));
+    if (activeAdmins.length === 0) {
+      return { success: false, message: 'Phải có ít nhất một tài khoản Admin đang hoạt động.' };
+    }
+
+    if (data.id) {
+      addToast('success', `Đã cập nhật người dùng ${data.fullName}.`);
+    } else {
       addToast('success', `Đã tạo mới người dùng ${data.fullName}.`);
     }
 
@@ -1013,6 +1025,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Không thể xóa tài khoản Admin mặc định.' };
     }
     const next = users.filter((u) => u.id !== id);
+    
+    const activeAdmins = next.filter((u) => u.status === 'ACTIVE' && u.roleIds?.includes('ROLE-ADMIN'));
+    if (activeAdmins.length === 0) {
+      return { success: false, message: 'Không thể xóa tài khoản Admin cuối cùng.' };
+    }
+
     setUsers(next);
     StorageService.saveUsers(next);
     addToast('success', 'Đã xóa người dùng thành công.');
@@ -1084,6 +1102,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     StorageService.saveRoles(next);
     addToast('success', 'Đã xóa vai trò thành công.');
     return { success: true };
+  };
+
+  const updateRoleActionPermissions = (roleId: string, actionPermissions: Role['actionPermissions']) => {
+    const next = roles.map((r) => {
+      if (r.id === roleId) {
+        return {
+          ...r,
+          actionPermissions,
+        };
+      }
+      return r;
+    });
+    setRoles(next);
+    StorageService.saveRoles(next);
   };
 
   const updateRolePermissions = (roleId: string, allowedMenus: MenuKey[]) => {
@@ -1283,6 +1315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveRole,
         deleteRole,
         updateRolePermissions,
+        updateRoleActionPermissions,
         canDo,
       }}
     >
