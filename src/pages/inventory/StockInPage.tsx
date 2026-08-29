@@ -23,6 +23,7 @@ export const StockInPage: React.FC = () => {
     projects,
     suppliers,
     materials,
+    manufacturers,
     stockTransactions,
     boms,
     executeStockTransaction,
@@ -59,8 +60,8 @@ export const StockInPage: React.FC = () => {
         const matchesSearch =
           searchQuery === '' ||
           tx.referenceCode?.toLowerCase().includes(q) ||
-          mat?.name?.toLowerCase().includes(q) ||
-          mat?.code?.toLowerCase().includes(q);
+          mat?.model?.toLowerCase().includes(q) ||
+          mat?.description?.toLowerCase().includes(q);
 
         const matchesWh = !warehouseFilter || tx.warehouseId === warehouseFilter;
         const matchesPrj = !projectFilter || tx.projectId === projectFilter;
@@ -183,8 +184,8 @@ export const StockInPage: React.FC = () => {
                   <tr key={tx.id} className="hover:bg-slate-50 transition">
                     <td className="px-4 py-3 font-bold text-slate-900 font-mono">{tx.referenceCode}</td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-900">{mat?.name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{mat?.code}</div>
+                      <div className="font-semibold text-slate-900 font-mono">{mat?.model || '—'}</div>
+                      <div className="text-[11px] text-slate-500 truncate max-w-[200px]">{mat?.description}</div>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-800">{wh?.name}</td>
                     <td className="px-4 py-3">
@@ -259,11 +260,14 @@ export const StockInPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, materialId: e.target.value })}
                     className="w-full px-2.5 py-2 border border-slate-300 rounded bg-white"
                   >
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.code} — {m.name} ({m.specs})
-                      </option>
-                    ))}
+                    {materials.map((m) => {
+                      const mfg = manufacturers.find((man) => man.id === m.manufacturerId);
+                      return (
+                        <option key={m.id} value={m.id}>
+                          {mfg?.name ? `${mfg.name} | ` : ''}{m.model} — {m.description}
+                        </option>
+                      );
+                    })}
                   </select>
                 </FormField>
 

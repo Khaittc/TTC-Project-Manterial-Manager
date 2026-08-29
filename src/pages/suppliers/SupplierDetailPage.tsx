@@ -156,12 +156,12 @@ export const SupplierDetailPage: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold text-[11px]">
                 <tr>
-                  <th className="px-4 py-3">Mã VT</th>
-                  <th className="px-4 py-3">Tên vật tư</th>
+                  <th className="px-4 py-3">Model</th>
+                  <th className="px-4 py-3">Mô tả vật tư</th>
                   <th className="px-4 py-3 text-right">Đơn giá hiện tại (VNĐ)</th>
                   <th className="px-4 py-3 text-right">Giá trước đó</th>
                   <th className="px-4 py-3 text-center">Biến động</th>
-                  <th className="px-4 py-3">Ngày hiệu lực</th>
+                  <th className="px-4 py-3">Ngày cập nhật</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -180,8 +180,8 @@ export const SupplierDetailPage: React.FC = () => {
                     const delta = calculatePriceDelta(p.currentPrice, p.previousPrice);
                     return (
                       <tr key={p.id} className="hover:bg-slate-50 transition">
-                        <td className="px-4 py-3 font-bold text-slate-900 font-mono">{mat?.code}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-900">{mat?.name}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900 font-mono">{mat?.model || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{mat?.description || '—'}</td>
                         <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
                           {formatCurrency(p.currentPrice)}
                         </td>
@@ -203,7 +203,7 @@ export const SupplierDetailPage: React.FC = () => {
                             <span className="text-slate-400 font-medium">Không đổi</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-600">{formatDate(p.effectiveDate)}</td>
+                        <td className="px-4 py-3 text-slate-600">{formatDate(p.currentDate)}</td>
                       </tr>
                     );
                   })

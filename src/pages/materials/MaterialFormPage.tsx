@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Boxes, Save, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft, Info, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FormField } from '../../components/forms/FormField';
-import { MasterStatus } from '../../domain/types';
+import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
+import { MaterialStatus } from '../../domain/types';
 
 export const MaterialFormPage: React.FC = () => {
   const { materialId } = useParams<{ materialId: string }>();
@@ -14,48 +15,48 @@ export const MaterialFormPage: React.FC = () => {
   const existingMaterial = materials.find((m) => m.id === materialId);
 
   const [form, setForm] = useState({
-    code: '',
-    name: '',
-    specs: '',
     categoryId: '',
     manufacturerId: '',
+    model: '',
+    description: '',
     uomId: '',
-    status: 'ACTIVE' as MasterStatus,
+    status: 'ACTIVE' as MaterialStatus,
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [identityConfirmOpen, setIdentityConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (isEdit && existingMaterial) {
       setForm({
-        code: existingMaterial.code,
-        name: existingMaterial.name,
-        specs: existingMaterial.specs,
         categoryId: existingMaterial.categoryId,
         manufacturerId: existingMaterial.manufacturerId,
+        model: existingMaterial.model,
+        description: existingMaterial.description,
         uomId: existingMaterial.uomId,
         status: existingMaterial.status,
       });
     } else if (!isEdit) {
       setForm({
-        code: '',
-        name: '',
-        specs: '',
         categoryId: categories[0]?.id || '',
         manufacturerId: manufacturers[0]?.id || '',
+        model: '',
+        description: '',
         uomId: uoms[0]?.id || '',
         status: 'ACTIVE',
       });
     }
   }, [isEdit, existingMaterial, categories, manufacturers, uoms]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
+  const executeSave = () => {
     const res = saveMaterial({
       id: isEdit && existingMaterial ? existingMaterial.id : undefined,
-      ...form,
+      categoryId: form.categoryId,
+      manufacturerId: form.manufacturerId,
+      model: form.model.trim(),
+      description: form.description.trim(),
+      uomId: form.uomId,
+      status: form.status,
     });
 
     if (res.success) {
@@ -64,6 +65,36 @@ export const MaterialFormPage: React.FC = () => {
       setError(res.message || 'Lỗi khi lưu vật tư.');
     }
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!form.model.trim()) {
+      setError('Vui lòng nhập Model vật tư.');
+      return;
+    }
+
+    // Check if identity (Manufacturer or Model) changed during edit
+    if (
+      isEdit &&
+      existingMaterial &&
+      (form.manufacturerId !== existingMaterial.manufacturerId ||
+        form.model.trim() !== existingMaterial.model)
+    ) {
+      setIdentityConfirmOpen(true);
+      return;
+    }
+
+    executeSave();
+  };
+
+  const handleConfirmIdentityChange = () => {
+    setIdentityConfirmOpen(false);
+    executeSave();
+  };
+
+  const isUomLocked = Boolean(isEdit && existingMaterial?.isReferenced);
 
   return (
     <div className="max-w-3xl space-y-4">
@@ -82,9 +113,20 @@ export const MaterialFormPage: React.FC = () => {
               {isEdit ? 'Chỉnh sửa vật tư' : 'Thêm mới vật tư'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Khai báo mã hiệu, quy cách kỹ thuật và phân loại cho vật tư
+              Khai báo thông tin vật tư theo chuẩn định danh Hãng sản xuất + Model
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Canonical Identity Notice */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2.5 text-xs text-blue-900">
+        <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="font-bold">Định danh vật tư chuẩn (Canonical Identity): Hãng sản xuất + Model</p>
+          <p className="text-blue-700 mt-0.5">
+            Hệ thống không sinh mã SKU hoặc mã vật tư nội bộ tự đặt. Sự kết hợp giữa Hãng sản xuất và Model phải là duy nhất.
+          </p>
         </div>
       </div>
 
@@ -98,25 +140,28 @@ export const MaterialFormPage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Mã vật tư" required helperText="Mã duy nhất trong toàn hệ thống">
-              <input
-                type="text"
-                required
-                value={form.code ?? ''}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded font-semibold text-slate-900"
-                placeholder="VD: FX5U-32MR/ES"
-              />
+            <FormField label="Hãng sản xuất" required helperText="Nhà chế tạo thiết bị">
+              <select
+                value={form.manufacturerId ?? ''}
+                onChange={(e) => setForm({ ...form, manufacturerId: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded bg-white font-medium"
+              >
+                {manufacturers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.code})
+                  </option>
+                ))}
+              </select>
             </FormField>
 
-            <FormField label="Tên vật tư" required>
+            <FormField label="Model vật tư" required helperText="Part Number / Mã hiệu từ hãng chế tạo">
               <input
                 type="text"
                 required
-                value={form.name ?? ''}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded font-medium text-slate-900"
-                placeholder="VD: Bộ lập trình PLC Mitsubishi"
+                value={form.model ?? ''}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded font-semibold font-mono text-slate-900"
+                placeholder="VD: 6ES7214-1AG40-0XB0"
               />
             </FormField>
 
@@ -134,25 +179,22 @@ export const MaterialFormPage: React.FC = () => {
               </select>
             </FormField>
 
-            <FormField label="Hãng sản xuất" required>
-              <select
-                value={form.manufacturerId ?? ''}
-                onChange={(e) => setForm({ ...form, manufacturerId: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded bg-white"
-              >
-                {manufacturers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.code})
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField label="Đơn vị tính (ĐVT)" required>
+            <FormField
+              label="Đơn vị tính (ĐVT)"
+              required
+              helperText={
+                isUomLocked
+                  ? 'Đơn vị tính bị khóa vì vật tư đã phát sinh giao dịch/BOM trong hệ thống.'
+                  : 'Đơn vị đo lường chuẩn'
+              }
+            >
               <select
                 value={form.uomId ?? ''}
+                disabled={isUomLocked}
                 onChange={(e) => setForm({ ...form, uomId: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded bg-white"
+                className={`w-full px-3 py-2 border border-slate-300 rounded bg-white ${
+                  isUomLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
+                }`}
               >
                 {uoms.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -165,23 +207,22 @@ export const MaterialFormPage: React.FC = () => {
             <FormField label="Trạng thái">
               <select
                 value={form.status ?? 'ACTIVE'}
-                onChange={(e) => setForm({ ...form, status: e.target.value as MasterStatus })}
+                onChange={(e) => setForm({ ...form, status: e.target.value as MaterialStatus })}
                 className="w-full px-3 py-2 border border-slate-300 rounded bg-white"
               >
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="INACTIVE">Ngưng hoạt động</option>
+                <option value="ACTIVE">Đang hoạt động (Active)</option>
+                <option value="ARCHIVED">Lưu trữ (Archived)</option>
               </select>
             </FormField>
           </div>
 
-          <FormField label="Thông số kỹ thuật / Quy cách" required helperText="Điện áp, công suất, số I/O, chuẩn truyền thông...">
+          <FormField label="Mô tả chi tiết vật tư" helperText="Thông số kỹ thuật, cấu hình, điện áp, tính năng chính...">
             <textarea
               rows={3}
-              required
-              value={form.specs ?? ''}
-              onChange={(e) => setForm({ ...form, specs: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded font-mono text-xs"
-              placeholder="VD: 16 In / 16 Out Relay, AC 100-240V, RS-485 / Ethernet built-in"
+              value={form.description ?? ''}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-300 rounded text-xs"
+              placeholder="VD: SIMATIC S7-1200, CPU 1214C, compact CPU, DC/DC/DC, 14 DI / 10 DO / 2 AI..."
             />
           </FormField>
 
@@ -195,7 +236,7 @@ export const MaterialFormPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition"
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition shadow-2xs"
             >
               <Save className="w-4 h-4" />
               <span>{isEdit ? 'Lưu cập nhật' : 'Tạo vật tư'}</span>
@@ -203,6 +244,15 @@ export const MaterialFormPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Identity Change Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={identityConfirmOpen}
+        title="Xác nhận thay đổi định danh vật tư"
+        message="Bạn đang thay đổi Hãng sản xuất hoặc Model của vật tư. Thay đổi định danh này sẽ cập nhật trên toàn hệ thống và các liên kết liên quan. Bạn có chắc chắn muốn lưu thay đổi này?"
+        onConfirm={handleConfirmIdentityChange}
+        onCancel={() => setIdentityConfirmOpen(false)}
+      />
     </div>
   );
 };

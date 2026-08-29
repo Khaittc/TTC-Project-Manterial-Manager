@@ -419,10 +419,9 @@ export const ProjectDetailPage: React.FC = () => {
                         className="rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer"
                       />
                     </th>
-                    <th className="px-3 py-3">Mã VT</th>
-                    <th className="px-3 py-3 min-w-[160px]">Tên vật tư</th>
-                    <th className="px-3 py-3 min-w-[160px]">Thông số KT</th>
                     <th className="px-3 py-3">Hãng SX</th>
+                    <th className="px-3 py-3 font-bold">Model</th>
+                    <th className="px-3 py-3 min-w-[200px]">Mô tả vật tư</th>
                     <th className="px-2 py-3 text-center">ĐVT</th>
                     <th className="px-3 py-3 text-right">SL Dự toán</th>
                     <th className="px-3 py-3 text-right">Đơn giá dự toán</th>
@@ -435,7 +434,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 text-slate-800">
                   {filteredBOMs.length === 0 ? (
                     <tr>
-                      <td colSpan={12}>
+                      <td colSpan={11}>
                         <EmptyState
                           title="Chưa có vật tư nào trong BOM"
                           description="Thêm vật tư mới vào BOM hoặc import từ file Excel dự toán."
@@ -466,22 +465,18 @@ export const ProjectDetailPage: React.FC = () => {
                             />
                           </td>
 
-                          <td className="px-3 py-3 font-bold text-slate-900">
+                          <td className="px-3 py-3 text-slate-700 font-medium">{mfg?.name || '—'}</td>
+
+                          <td className="px-3 py-3 font-bold text-slate-900 font-mono">
                             <span
                               onClick={() => navigate(`/materials/${mat?.id}`)}
                               className="hover:text-blue-600 cursor-pointer underline decoration-dotted"
                             >
-                              {mat?.code || '—'}
+                              {mat?.model || '—'}
                             </span>
                           </td>
 
-                          <td className="px-3 py-3 font-semibold text-slate-900">{mat?.name || '—'}</td>
-
-                          <td className="px-3 py-3 text-slate-600 font-mono text-[11px] truncate max-w-[200px]">
-                            {mat?.specs || '—'}
-                          </td>
-
-                          <td className="px-3 py-3 text-slate-600">{mfg?.name || '—'}</td>
+                          <td className="px-3 py-3 text-slate-700 text-xs truncate max-w-[240px]">{mat?.description || '—'}</td>
 
                           <td className="px-2 py-3 text-center font-medium">{uom?.code || 'pcs'}</td>
 
@@ -805,7 +800,7 @@ export const ProjectDetailPage: React.FC = () => {
                             {tx.type === 'IN' ? 'Nhập kho' : 'Xuất kho'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-slate-900">{mat?.name}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900 font-mono">{mat?.model}</td>
                         <td className="px-4 py-3 text-slate-600">{wh?.name}</td>
                         <td className="px-4 py-3 text-right font-bold text-slate-900">
                           {formatQuantity(tx.quantity)}
@@ -857,11 +852,14 @@ export const ProjectDetailPage: React.FC = () => {
                     onChange={(e) => setBomFormModal({ ...bomFormModal, item: { ...bomFormModal.item, materialId: e.target.value } })}
                     className="w-full px-2.5 py-2 border border-slate-300 rounded text-xs bg-white"
                   >
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.code} — {m.name} ({m.specs})
-                      </option>
-                    ))}
+                    {materials.map((m) => {
+                      const mfg = manufacturers.find((man) => man.id === m.manufacturerId);
+                      return (
+                        <option key={m.id} value={m.id}>
+                          {mfg?.name ? `${mfg.name} | ` : ''}{m.model} — {m.description}
+                        </option>
+                      );
+                    })}
                   </select>
                 </FormField>
 

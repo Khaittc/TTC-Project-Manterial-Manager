@@ -39,8 +39,8 @@ export const HistoryPage: React.FC = () => {
       const matchesSearch =
         searchQuery === '' ||
         tx.referenceCode?.toLowerCase().includes(q) ||
-        mat?.name?.toLowerCase().includes(q) ||
-        mat?.code?.toLowerCase().includes(q) ||
+        mat?.model?.toLowerCase().includes(q) ||
+        mat?.description?.toLowerCase().includes(q) ||
         tx.notes?.toLowerCase().includes(q);
 
       const matchesType = !typeFilter || tx.type === typeFilter;
@@ -91,7 +91,7 @@ export const HistoryPage: React.FC = () => {
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Tìm theo mã phiếu, mã VT, tên VT, ghi chú..."
+            placeholder="Tìm theo mã phiếu, model, mô tả, ghi chú..."
             className="w-72"
           />
 
@@ -138,7 +138,7 @@ export const HistoryPage: React.FC = () => {
               <tr>
                 <th className="px-4 py-3">Mã phiếu</th>
                 <th className="px-4 py-3">Loại</th>
-                <th className="px-4 py-3">Mã & Tên vật tư</th>
+                <th className="px-4 py-3">Vật tư (Model & Mô tả)</th>
                 <th className="px-4 py-3">Kho lưu trữ</th>
                 <th className="px-4 py-3">Dự án liên quan</th>
                 <th className="px-4 py-3 text-right">Số lượng</th>
@@ -189,8 +189,8 @@ export const HistoryPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{mat?.name}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">{mat?.code}</div>
+                        <div className="font-semibold text-slate-900 font-mono">{mat?.model || '—'}</div>
+                        <div className="text-[11px] text-slate-500 truncate max-w-[220px]">{mat?.description}</div>
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-800">{wh?.name}</td>
                       <td className="px-4 py-3">
