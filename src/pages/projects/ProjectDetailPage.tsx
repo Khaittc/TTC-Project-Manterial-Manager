@@ -16,8 +16,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   ChevronRight,
-  Clock,
-  FileText,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -34,8 +32,8 @@ import { FormField } from '../../components/forms/FormField';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { SpecBadge } from '../../components/common/SpecBadge';
-import { formatDate, formatQuantity } from '../../domain/mockRules';
-import { Project, ProjectStatus, ActionRequiredItem } from '../../domain/types';
+import { formatDate } from '../../domain/mockRules';
+import { Project, ProjectStatus } from '../../domain/types';
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -125,23 +123,23 @@ export const ProjectDetailPage: React.FC = () => {
     ];
   }, [projectBOMs]);
 
-  // 3. Receiving Summary Calculations (Read-only, canonical BOM fields)
+  // 3. Receiving Summary Calculations (Line/status-based read-only summary, no cross-UOM aggregation)
   const receivingSummary = useMemo(() => {
-    const totalBomQty = projectBOMs.reduce((acc, b) => acc + (b.bomQty || 0), 0);
-    const totalReceivedQty = projectBOMs.reduce((acc, b) => acc + (b.projectReceivedQty || 0), 0);
-    const totalRemainingQty = projectBOMs.reduce((acc, b) => acc + (b.remainingQty || 0), 0);
-    const fullyReceivedLines = projectBOMs.filter((b) => b.status === 'FULFILLED').length;
-    const partialReceivedLines = projectBOMs.filter((b) => b.status === 'PARTIALLY_RECEIVED').length;
-    const notReceivedLines = projectBOMs.filter((b) => b.status === 'NOT_PURCHASED' || b.status === 'PURCHASING').length;
+    const totalLines = projectBOMs.length;
+    const fulfilledLines = projectBOMs.filter((b) => b.status === 'FULFILLED').length;
+    const partialLines = projectBOMs.filter((b) => b.status === 'PARTIALLY_RECEIVED').length;
+    const notReceivedLines = projectBOMs.filter(
+      (b) => b.status === 'NOT_PURCHASED' || b.status === 'PURCHASING'
+    ).length;
+    const lineCompletionPercent =
+      totalLines > 0 ? Math.round((fulfilledLines / totalLines) * 100) : 0;
 
     return {
-      totalBomQty,
-      totalReceivedQty,
-      totalRemainingQty,
-      fullyReceivedLines,
-      partialReceivedLines,
+      totalLines,
+      fulfilledLines,
+      partialLines,
       notReceivedLines,
-      percentReceived: totalBomQty > 0 ? Math.round((totalReceivedQty / totalBomQty) * 100) : 0,
+      lineCompletionPercent,
     };
   }, [projectBOMs]);
 
@@ -414,7 +412,7 @@ export const ProjectDetailPage: React.FC = () => {
 
           {/* Row 3: [ Tình trạng nhận hàng ][ Tình trạng hóa đơn ] */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Tình trạng nhận hàng (Read-only summary card) */}
+            {/* Tình trạng nhận hàng (Read-only summary card, line-based) */}
             <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
@@ -423,40 +421,40 @@ export const ProjectDetailPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Tình trạng nhận hàng</h3>
-                    <p className="text-xs text-slate-500">Tổng hợp khối lượng hàng đã giao nhận</p>
+                    <p className="text-xs text-slate-500">Tiến độ nhận hàng theo dòng vật tư BOM</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-blue-600">
-                    {receivingSummary.percentReceived}%
+                    {receivingSummary.lineCompletionPercent}%
                   </span>
-                  <span className="text-[10px] text-slate-400 block">hoàn tất</span>
+                  <span className="text-[10px] text-slate-400 block">% dòng BOM đã đủ</span>
                 </div>
               </div>
 
-              {/* Progress Bar */}
+              {/* Progress Bar (Line-based) */}
               <div className="space-y-1.5">
                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                    style={{ width: `${receivingSummary.percentReceived}%` }}
+                    style={{ width: `${receivingSummary.lineCompletionPercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[11px] text-slate-500">
-                  <span>Đã nhận: <strong className="text-slate-800">{formatQuantity(receivingSummary.totalReceivedQty)}</strong></span>
-                  <span>Tổng BOM: <strong className="text-slate-800">{formatQuantity(receivingSummary.totalBomQty)}</strong></span>
+                  <span>Dòng đã đủ: <strong className="text-slate-800">{receivingSummary.fulfilledLines} dòng</strong></span>
+                  <span>Tổng dòng BOM: <strong className="text-slate-800">{receivingSummary.totalLines} dòng</strong></span>
                 </div>
               </div>
 
-              {/* Breakdown metrics */}
+              {/* Breakdown metrics (Line-based) */}
               <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
                 <div className="p-2.5 rounded bg-slate-50 border border-slate-100">
                   <span className="text-[11px] text-slate-500 block">Đã đủ</span>
-                  <span className="text-sm font-bold text-emerald-600">{receivingSummary.fullyReceivedLines} dòng</span>
+                  <span className="text-sm font-bold text-emerald-600">{receivingSummary.fulfilledLines} dòng</span>
                 </div>
                 <div className="p-2.5 rounded bg-slate-50 border border-slate-100">
                   <span className="text-[11px] text-slate-500 block">Nhận 1 phần</span>
-                  <span className="text-sm font-bold text-amber-600">{receivingSummary.partialReceivedLines} dòng</span>
+                  <span className="text-sm font-bold text-amber-600">{receivingSummary.partialLines} dòng</span>
                 </div>
                 <div className="p-2.5 rounded bg-slate-50 border border-slate-100">
                   <span className="text-[11px] text-slate-500 block">Chưa nhận</span>
