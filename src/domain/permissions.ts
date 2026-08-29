@@ -108,6 +108,11 @@ export function getEffectiveUIVisibility(user?: User | null, allRoles?: Role[] |
     (r) => r && user.roleIds.includes(r.id) && (r.status === 'ACTIVE' || !r.status)
   );
 
+  if (activeRoles.some((r) => r.isSystemProtected)) {
+    SYSTEM_MENU_ITEMS.forEach((m) => visible.add(m.key));
+    return visible;
+  }
+
   for (const role of activeRoles) {
     const menus = role.uiVisibility || role.allowedMenus || [];
     for (const key of menus) {
@@ -134,6 +139,10 @@ export function hasActionPermission(
   const activeRoles = allRoles.filter(
     (r) => r && user.roleIds.includes(r.id) && (r.status === 'ACTIVE' || !r.status)
   );
+
+  if (activeRoles.some((r) => r.isSystemProtected)) {
+    return true;
+  }
 
   for (const role of activeRoles) {
     if (!role.actionPermissions) continue;

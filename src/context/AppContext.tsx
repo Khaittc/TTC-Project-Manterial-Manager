@@ -110,6 +110,7 @@ interface AppContextType {
   // User & Roles
   saveUser: (user: Partial<User>) => { success: boolean; message?: string };
   deleteUser: (id: string) => { success: boolean; message?: string };
+  resetUserPassword: (userId: string, newPassword: string) => { success: boolean; message?: string };
   saveRole: (role: Partial<Role>) => { success: boolean; message?: string };
   deleteRole: (id: string) => { success: boolean; message?: string };
   updateRolePermissions: (roleId: string, allowedMenus: MenuKey[]) => void;
@@ -1037,6 +1038,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
+  const resetUserPassword = (userId: string, newPassword: string) => {
+    if (!newPassword || newPassword.trim() === '') {
+      return { success: false, message: 'Mật khẩu mới không được để trống.' };
+    }
+    const user = users.find((u) => u.id === userId);
+    if (!user) {
+      return { success: false, message: 'Không tìm thấy người dùng.' };
+    }
+    const next = users.map((u) => (u.id === userId ? { ...u, password: newPassword } : u));
+    setUsers(next);
+    StorageService.saveUsers(next);
+    addToast('success', 'Đã đặt lại mật khẩu thành công.');
+    return { success: true };
+  };
+
   const saveRole = (data: Partial<Role>) => {
     if (!data.name || !data.name.trim()) return { success: false, message: 'Tên vai trò là bắt buộc.' };
 
@@ -1105,6 +1121,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateRoleActionPermissions = (roleId: string, actionPermissions: Role['actionPermissions']) => {
+    const role = roles.find(r => r.id === roleId);
+    if (role?.isSystemProtected) return;
+
     const next = roles.map((r) => {
       if (r.id === roleId) {
         return {
@@ -1119,6 +1138,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateRolePermissions = (roleId: string, allowedMenus: MenuKey[]) => {
+    const role = roles.find(r => r.id === roleId);
+    if (role?.isSystemProtected) return;
+
     const next = roles.map((r) => {
       if (r.id === roleId) {
         return {
@@ -1312,6 +1334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         executeStockTransaction,
         saveUser,
         deleteUser,
+        resetUserPassword,
         saveRole,
         deleteRole,
         updateRolePermissions,

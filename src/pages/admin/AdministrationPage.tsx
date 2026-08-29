@@ -46,6 +46,9 @@ export const AdministrationPage: React.FC = () => {
     roles,
     saveUser,
     deleteUser,
+    resetUserPassword,
+    saveRole,
+    deleteRole,
     updateRolePermissions,
     updateRoleActionPermissions,
     setCurrentUserId,
@@ -70,13 +73,23 @@ export const AdministrationPage: React.FC = () => {
   const [resetPasswordModal, setResetPasswordModal] = useState<{
     isOpen: boolean;
     userId: string;
-    newPassword: '';
-    confirmPassword: '';
+    newPassword: string;
+    confirmPassword: string;
   } | null>(null);
 
   // --- ROLE TAB STATE ---
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleDetailTab, setRoleDetailTab] = useState<'ui' | 'action'>('ui');
+  const [roleModal, setRoleModal] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'edit';
+    role: Partial<Role>;
+  }>({ isOpen: false, mode: 'create', role: {} });
+
+  const [deleteRoleConfirm, setDeleteRoleConfirm] = useState<{
+    isOpen: boolean;
+    roleId: string | null;
+  }>({ isOpen: false, roleId: null });
 
   // User Handlers
   const handleOpenAddUser = () => {
@@ -134,12 +147,12 @@ export const AdministrationPage: React.FC = () => {
       return;
     }
 
-    saveUser({
-      id: resetPasswordModal.userId,
-      password: resetPasswordModal.newPassword,
-    });
-    setResetPasswordModal(null);
-    addToast('success', 'Đặt lại mật khẩu thành công.');
+    const res = resetUserPassword(resetPasswordModal.userId, resetPasswordModal.newPassword);
+    if (res.success) {
+      setResetPasswordModal(null);
+    } else {
+      addToast('error', res.message || 'Lỗi đặt lại mật khẩu');
+    }
   };
 
   const handleDeleteUser = () => {
@@ -153,6 +166,48 @@ export const AdministrationPage: React.FC = () => {
   };
 
   // Role Handlers
+  const handleOpenAddRole = () => {
+    setRoleModal({
+      isOpen: true,
+      mode: 'create',
+      role: {
+        name: '',
+        description: '',
+        status: 'ACTIVE',
+      },
+    });
+  };
+
+  const handleOpenEditRole = (r: Role) => {
+    setRoleModal({
+      isOpen: true,
+      mode: 'edit',
+      role: { ...r },
+    });
+  };
+
+  const handleSaveRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roleModal.role.name) return;
+    
+    const res = saveRole(roleModal.role);
+    if (res.success) {
+      setRoleModal({ isOpen: false, mode: 'create', role: {} });
+    } else {
+      addToast('error', res.message || 'Lỗi lưu vai trò');
+    }
+  };
+
+  const handleDeleteRole = () => {
+    if (deleteRoleConfirm.roleId) {
+      const res = deleteRole(deleteRoleConfirm.roleId);
+      if (!res.success) {
+        addToast('error', res.message || 'Lỗi xóa vai trò');
+      }
+    }
+    setDeleteRoleConfirm({ isOpen: false, roleId: null });
+  };
+
   const handleToggleUIPermission = (menuKey: MenuKey) => {
     if (!selectedRole || selectedRole.isSystemProtected) return;
 
@@ -325,6 +380,23 @@ export const AdministrationPage: React.FC = () => {
       {/* TAB 2: VAI TRÒ & PHÂN QUYỀN */}
       {activeTab === 'roles' && !selectedRole && (
         <div className="space-y-4">
+          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="text-xs text-slate-600 flex items-center gap-4">
+              <div>
+                Có tổng cộng <span className="font-bold text-slate-900">{roles.length}</span> vai trò hệ thống
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddRole}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm vai trò</span>
+            </button>
+          </div>
+
           <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold text-[11px]">
@@ -332,7 +404,7 @@ export const AdministrationPage: React.FC = () => {
                   <th className="px-4 py-3">Tên vai trò</th>
                   <th className="px-4 py-3 text-center">Số lượng User</th>
                   <th className="px-4 py-3 text-center">Trạng thái</th>
-                  <th className="px-4 py-3 text-right w-24">Actions</th>
+                  <th className="px-4 py-3 text-right w-32">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -366,6 +438,21 @@ export const AdministrationPage: React.FC = () => {
                           >
                             Xem chi tiết
                           </button>
+                          {!r.isSystemProtected && (
+                            <>
+                              <ActionIconBtn
+                                icon={Pencil}
+                                label="Sửa vai trò"
+                                onClick={() => handleOpenEditRole(r)}
+                              />
+                              <ActionIconBtn
+                                icon={Trash2}
+                                label="Xóa vai trò"
+                                variant="danger"
+                                onClick={() => setDeleteRoleConfirm({ isOpen: true, roleId: r.id })}
+                              />
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -682,7 +769,7 @@ export const AdministrationPage: React.FC = () => {
                     onChange={(e) =>
                       setResetPasswordModal({
                         ...resetPasswordModal,
-                        newPassword: e.target.value as any,
+                        newPassword: e.target.value,
                       })
                     }
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
@@ -697,7 +784,7 @@ export const AdministrationPage: React.FC = () => {
                     onChange={(e) =>
                       setResetPasswordModal({
                         ...resetPasswordModal,
-                        confirmPassword: e.target.value as any,
+                        confirmPassword: e.target.value,
                       })
                     }
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
@@ -733,6 +820,87 @@ export const AdministrationPage: React.FC = () => {
         confirmLabel="Xác nhận xóa"
         onConfirm={handleDeleteUser}
         onCancel={() => setDeleteConfirm({ isOpen: false, userId: null })}
+      />
+
+      {/* Role Modal */}
+      {roleModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-900">
+                {roleModal.mode === 'create' ? 'Thêm vai trò mới' : 'Chỉnh sửa vai trò'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRoleModal({ isOpen: false, mode: 'create', role: {} })}
+                className="p-1 rounded text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRole}>
+              <div className="p-5 space-y-3.5 text-xs">
+                <FormField label="Tên vai trò" required>
+                  <input
+                    type="text"
+                    required
+                    value={roleModal.role.name || ''}
+                    onChange={(e) => setRoleModal({ ...roleModal, role: { ...roleModal.role, name: e.target.value } })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-medium text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </FormField>
+
+                <FormField label="Mô tả">
+                  <textarea
+                    value={roleModal.role.description || ''}
+                    onChange={(e) => setRoleModal({ ...roleModal, role: { ...roleModal.role, description: e.target.value } })}
+                    rows={2}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </FormField>
+
+                <FormField label="Trạng thái" required>
+                  <select
+                    value={roleModal.role.status || 'ACTIVE'}
+                    onChange={(e) => setRoleModal({ ...roleModal, role: { ...roleModal.role, status: e.target.value as MasterStatus } })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </FormField>
+              </div>
+
+              <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRoleModal({ isOpen: false, mode: 'create', role: {} })}
+                  className="px-3.5 py-1.5 border border-slate-300 text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50 transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded flex items-center gap-1.5 transition"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu vai trò</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Role Dialog */}
+      <ConfirmDialog
+        isOpen={deleteRoleConfirm.isOpen}
+        title="Xóa vai trò hệ thống?"
+        message="Hành động này không thể hoàn tác. Không thể xóa nếu vai trò đang được gán cho người dùng."
+        confirmLabel="Xác nhận xóa"
+        onConfirm={handleDeleteRole}
+        onCancel={() => setDeleteRoleConfirm({ isOpen: false, roleId: null })}
       />
     </div>
   );
