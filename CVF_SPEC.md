@@ -398,15 +398,35 @@ Rules:
 
 **Status:** `FROZEN_CORE`
 
-Each BOM line distinguishes:
+Each BOM line has three distinct Supplier concepts:
 
-1. Cheapest Supplier — system advisory based on lowest Current Price.
-2. Preferred Supplier — user-configured advisory.
-3. Final Selected Supplier — final user decision for the BOM line.
+### Cheapest Supplier
 
-Final Selected Supplier may be neither Cheapest nor Preferred.
+System advisory.
 
-The system advises; the human decides.
+Defined as the Supplier with the lowest valid `Current Price` for the Material.
+
+### Preferred Supplier
+
+User-configured advisory from the Material + Supplier relationship.
+
+A Material may have:
+
+`0..1 Preferred Supplier`
+
+### Final Selected Supplier
+
+The Supplier explicitly selected by the user for this Project BOM line.
+
+Final Selected Supplier may be:
+
+- Cheapest Supplier;
+- Preferred Supplier;
+- neither Cheapest nor Preferred.
+
+The system supports the decision.
+
+The system does NOT make the final Supplier decision automatically.
 
 No scoring algorithm, lead-time optimization, or auto-procurement logic in current scope.
 
@@ -416,30 +436,222 @@ No scoring algorithm, lead-time optimization, or auto-procurement logic in curre
 
 **Status:** `PARTIAL`
 
-Current BOM line semantics:
+### Final Supplier and Final Unit Price
 
+**Rule status:** `CONFIRMED`
+
+When a Final Supplier is selected:
+
+Final Unit Price initially defaults to:
+
+`Supplier Current Price at the time of selection`
+
+The user may change the Final Unit Price to represent the negotiated Project-specific purchase price.
+
+Therefore:
+
+`Supplier Current Price != necessarily Project Final Unit Price`
+
+Final Unit Price belongs to the Project BOM decision.
+
+Supplier Current Price belongs to the Material + Supplier price master relationship.
+
+Updating Supplier Current Price in the future MUST NOT automatically change an already confirmed Project BOM Final Unit Price.
+
+Example:
+
+At selection:
+
+Supplier Current Price = 8,100,000 VND
+
+Negotiated Final Unit Price = 7,950,000 VND
+
+Later Supplier Current Price becomes 8,300,000 VND.
+
+The existing BOM Final Unit Price remains:
+
+7,950,000 VND
+
+unless the user explicitly changes the Project BOM decision.
+
+Calculation:
+
+`Amount = BOM Required Qty × Final Unit Price`
+
+### BOM Procurement Status Model
+
+**Rule status:** `CONFIRMED_FOR_PROTOTYPE_V0`
+
+The BOM `Trạng thái` represents:
+
+`Procurement / Delivery Progress`
+
+It does NOT represent Supplier-selection status.
+
+Prototype display states:
+
+1. `Kiểm tra nội bộ`
+2. `Đang chờ báo giá`
+3. `Chờ thanh toán`
+4. `Đã đặt hàng`
+5. `Đã nhận x / y`
+6. `Đã nhận đủ`
+7. `Đang trả hàng / đổi hàng`
+
+Suggested implementation tokens may map 1:1 as:
+
+- `INTERNAL_REVIEW`
+- `AWAITING_QUOTATION`
+- `AWAITING_PAYMENT`
+- `ORDERED`
+- `PARTIALLY_RECEIVED`
+- `FULLY_RECEIVED`
+- `RETURN_OR_EXCHANGE`
+
+These token names are implementation-facing identifiers for the prototype.
+
+The Vietnamese business labels above are authoritative for current UI.
+
+### Procurement Status Semantics
+
+#### Kiểm tra nội bộ
+
+The BOM line is being internally reviewed before Supplier procurement progresses.
+
+#### Đang chờ báo giá
+
+Supplier quotation/pricing is still being collected or reviewed.
+
+Final Supplier may still be unset.
+
+#### Chờ thanh toán
+
+A Supplier may already be selected and the purchase is waiting for a payment/deposit-related step where applicable.
+
+This state exists in the procurement model.
+
+However:
+
+`AWAITING_PAYMENT` is NOT a mandatory state for every Supplier/order.
+
+Do NOT enforce a universal transition:
+
+`AWAITING_QUOTATION → AWAITING_PAYMENT → ORDERED`
+
+because payment terms may differ. Examples may include:
+
+- advance payment;
+- deposit;
+- credit terms;
+- payment after delivery.
+
+The production payment-term transition policy remains not fully frozen.
+
+#### Đã đặt hàng
+
+The user has recorded that an actual order has been placed with the selected Supplier outside this application.
+
+Selecting Final Supplier alone MUST NOT automatically set:
+
+`Đã đặt hàng`
+
+#### Đã nhận x / y
+
+Derived from Goods Receiving.
+
+Where:
+
+`x = cumulative Project Received / Allocated Qty`
+
+`y = Current BOM Required Qty`
+
+This status is not manually editable in Supplier Drawer.
+
+#### Đã nhận đủ
+
+Derived from Goods Receiving when Project received/allocated quantity satisfies the current BOM requirement.
+
+This status is not manually editable in Supplier Drawer.
+
+#### Đang trả hàng / đổi hàng
+
+Exception state used when received goods are being returned or exchanged.
+
+It is not a mandatory sequential stage.
+
+Entry should require explicit user action.
+
+Return/exchange detailed transaction semantics remain outside current frozen scope.
+
+### Supplier Selection vs Procurement Status
+
+These are separate dimensions.
+
+Example:
+
+Final Selected Supplier:
+
+`Supplier A`
+
+Procurement Status:
+
+`Chờ thanh toán`
+
+The Supplier answers:
+
+`Mua từ ai?`
+
+The status answers:
+
+`Việc mua/giao hàng đang ở bước nào?`
+
+Changing Final Supplier does not automatically determine procurement status.
+
+### BOM Business Fields
+
+A BOM line may contain/use:
+
+- Project.
 - Material.
 - Required Qty.
 - UOM.
-- Cheapest Supplier + price.
-- Preferred Supplier + price.
+- Cheapest Supplier advisory.
+- Preferred Supplier advisory.
 - Final Selected Supplier.
 - Final Unit Price.
 - Amount.
-- Prototype processing status.
+- Procurement Status.
+- cumulative Project Received Qty.
+- Remaining Qty.
+- Notes where applicable.
 
-Current amount rule:
+The main UI does not need to display every field.
 
-`Amount = BOM Required Qty × Final Supplier Current Price`
+UI presentation is governed by `CVF_UI.md`.
 
-Open decisions:
+### Existing Open BOM Rules Remain Open
 
-- editing BOM after purchasing begins = `DEFERRED_TO_PROTOTYPE_REVIEW`;
-- BOM version/revision model = `PARTIAL`;
-- final BOM lifecycle = not frozen;
-- BOM import contract = not frozen.
+DO NOT resolve the following through this update:
 
-Do not invent production versioning or post-purchase delta semantics.
+#### BOM edit after purchasing begins
+
+Status remains:
+
+`DEFERRED_TO_PROTOTYPE_REVIEW`
+
+#### BOM version/revision
+
+Status remains:
+
+`PARTIAL`
+
+#### BOM Import contract
+
+Still not frozen.
+
+#### Detailed return/exchange transaction workflow
+
+Still not frozen.
 
 ---
 
@@ -498,6 +710,31 @@ Rules:
 - Project received/allocated quantity is cumulative;
 - Remaining = current requirement minus project allocated/received quantity;
 - Project Allocation must not exceed the current BOM requirement.
+
+### Goods Receiving Integration & Status Derivation
+
+Receiving activity is authoritative for these procurement status displays:
+
+- `Đã nhận x / y`
+- `Đã nhận đủ`
+
+If:
+
+`0 < Project Received Qty < BOM Required Qty`
+
+display:
+
+`Đã nhận x / y`
+
+If:
+
+`Project Received Qty >= BOM Required Qty`
+
+display:
+
+`Đã nhận đủ`
+
+Do not allow Supplier Drawer to manually override these receiving-derived states.
 
 ---
 
@@ -673,6 +910,7 @@ These are required before final production Work Orders.
 | OPEN-011 | Authorization UI | Role Management navigation | `UI_PENDING` |
 | OPEN-012 | Technical | API/DB/Auth/Security/Backup/Deployment/NFR | `NOT_STARTED` |
 | OPEN-013 | Project Monitoring | Final procurement/receiving status enum | `PARTIAL` |
+| OPEN-014 | BOM / Procurement | Payment-term rules and mandatory/optional transition behavior around Chờ thanh toán will be defined how for production? | `PARTIAL` |
 
 ---
 

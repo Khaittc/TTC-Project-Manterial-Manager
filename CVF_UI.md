@@ -651,65 +651,314 @@ These are prototype labels, not frozen production enums.
 
 ---
 
-## 17. BOM & Supplier Tab
+## 17. BOM & Nhà cung cấp
 
 **Design status:** `FROZEN_FOR_PROTOTYPE_V0`
 
-Toolbar:
+### Purpose
 
-- Search Model/Description.
-- Category filter.
+The main BOM table is an operational overview.
+
+Its purpose is to let users quickly answer:
+
+1. Project cần những vật tư nào?
+2. Số lượng bao nhiêu?
+3. Đã chốt mua từ Nhà cung cấp nào?
+4. Tiến độ mua và giao hàng hiện đang ở đâu?
+
+Price comparison and Supplier selection MUST NOT make the main BOM table excessively wide.
+
+The previous wide BOM table containing Cheapest Price, Preferred Price, Final Price and Amount columns is:
+
+`SUPERSEDED`
+
+---
+
+### Toolbar
+
+Provide:
+
+- Search by Model / Description.
+- Material Category filter.
 - Manufacturer filter.
-- Supplier status filter.
-- Import BOM.
-- Edit BOM.
+- Procurement Status filter.
+- `Import BOM`.
+- `Chỉnh sửa BOM`.
 
-Table columns:
+`Import BOM` remains a placeholder until its import contract is frozen.
 
-- Category.
-- Manufacturer.
-- Model.
-- Description.
-- BOM Qty.
-- UOM.
-- Lowest Price.
+---
+
+### Main BOM Table
+
+The table MUST contain exactly these primary columns, in this order:
+
+1. `Nhóm vật tư`
+2. `Hãng`
+3. `Model`
+4. `Mô tả`
+5. `Số lượng`
+6. `ĐVT`
+7. `Nhà cung cấp`
+8. `Trạng thái`
+9. `Thao tác`
+
+Do NOT display the following as main-table columns:
+
 - Cheapest Supplier.
+- Cheapest Price.
 - Preferred Supplier.
 - Preferred Price.
-- Final Supplier.
 - Final Unit Price.
 - Amount.
-- Status.
-- Action.
+- Supplier price trend.
 
-Rules:
+These belong inside the Supplier & Price Drawer.
 
-- Cheapest computed from mock Current Price.
-- Preferred from Material configuration.
-- Final Supplier selected by user.
-- Final may differ from Cheapest and Preferred.
-- Final Unit Price derives from chosen Supplier Current Price.
-- Amount = BOM Qty × Final Unit Price.
+---
 
-Footer may show:
+### Nhà cung cấp Column
 
-- total using Cheapest;
-- total using Preferred;
-- total using Final Selected.
+`Nhà cung cấp` means:
 
-### Edit BOM boundary
+`Final Selected Supplier`
 
-If mock purchasing has started:
+It does NOT mean Cheapest Supplier or Preferred Supplier.
+
+If no Final Supplier has been confirmed:
 
 display:
 
-`Behavior chỉnh BOM sau khi bắt đầu mua hàng chưa được chốt trong SPEC.`
+`Chưa chọn NCC`
 
-Do not invent versioning or reconciliation.
+After confirmation:
 
-### Import BOM
+display the Final Selected Supplier name.
 
-Placeholder only until contract is frozen.
+Supplier selection and procurement status are separate concepts.
+
+Example:
+
+`ABC Automation | Chờ thanh toán`
+
+means:
+
+- Supplier = ABC Automation.
+- Procurement progress = Chờ thanh toán.
+
+---
+
+### Supplier & Price Right Drawer
+
+**Design status:** `FROZEN_FOR_PROTOTYPE_V0`
+
+From the BOM line `Thao tác` column, provide an action:
+
+`Xem / Chọn NCC & Giá`
+
+This opens a Drawer from the RIGHT side.
+
+The user remains on the BOM table and does not navigate to another page.
+
+Recommended desktop width:
+
+approximately 520–640 px.
+
+#### Drawer Header
+
+Show BOM context:
+
+- Manufacturer | Model.
+- Description.
+- BOM Quantity.
+- UOM.
+- Current Procurement Status.
+
+Example:
+
+`Siemens | 6ES7214-1AG40-0XB0`
+
+`SL BOM: 10 pcs`
+
+`Trạng thái: Đang chờ báo giá`
+
+#### Supplier Comparison Area
+
+Show all available Supplier Price records for the Material.
+
+Each Supplier row/card must show:
+
+- Supplier Name.
+- Previous Price.
+- Current Price.
+- Price Change.
+- `Preferred` badge when applicable.
+- `Cheapest` badge when applicable.
+- Final Selected indication when applicable.
+
+Currency:
+
+`VND`
+
+No VAT.
+
+Do not show lead time, MOQ, quantity tier or logistics scoring.
+
+#### Supplier Selection
+
+User may select a Supplier by clicking its row/card or equivalent explicit selector.
+
+Selecting a Supplier does NOT immediately save it.
+
+The user must explicitly confirm the decision.
+
+The system MUST NOT automatically choose the Cheapest or Preferred Supplier.
+
+#### Purchase Decision Area
+
+After a Supplier is selected, show:
+
+- `NCC cuối cùng`
+- `Giá hiện tại của NCC`
+- `Đơn giá chốt`
+- `Số lượng BOM`
+- `Thành tiền`
+
+Calculation:
+
+`Amount = BOM Quantity × Final Unit Price`
+
+#### Final Unit Price UX
+
+When a Supplier is selected:
+
+`Final Unit Price`
+
+defaults to:
+
+`Supplier Current Price`
+
+But the user may manually change Final Unit Price to reflect the actual negotiated Project purchase price.
+
+Example:
+
+Supplier Current Price:
+
+`8.100.000 VND`
+
+Final Unit Price:
+
+`7.950.000 VND`
+
+The Drawer must clearly distinguish these values.
+
+Changing Final Unit Price MUST NOT automatically update Supplier Current Price.
+
+#### Procurement Status in Drawer
+
+The Drawer may allow manual selection of applicable PRE-RECEIVING procurement states:
+
+- `Kiểm tra nội bộ`
+- `Đang chờ báo giá`
+- `Chờ thanh toán`
+- `Đã đặt hàng`
+
+Selecting Final Supplier does NOT automatically mean:
+
+`Đã đặt hàng`
+
+Supplier selection and purchasing progress remain separate.
+
+#### Receiving-derived Statuses
+
+The following statuses MUST NOT be manually selected in Supplier & Price Drawer:
+
+- `Đã nhận x / y`
+- `Đã nhận đủ`
+
+They are derived from Goods Receiving activity.
+
+Where:
+
+`x / y = Project Received Qty / Current BOM Required Qty`
+
+Examples:
+
+- `Đã nhận 2 / 10`
+- `Đã nhận 7 / 10`
+- `Đã nhận đủ`
+
+#### Return / Exchange Exception
+
+`Đang trả hàng / đổi hàng`
+
+is an exception state.
+
+It is NOT part of the mandatory linear procurement sequence.
+
+Provide a separate action such as:
+
+`Đánh dấu trả / đổi hàng`
+
+The action should:
+
+- require confirmation;
+- allow an optional note;
+- show current received quantity where relevant.
+
+After the issue is resolved, the BOM line may return to the appropriate procurement/receiving status.
+
+Do not invent a complete return transaction workflow in Prototype V0.
+
+#### Drawer Footer
+
+Use a sticky footer:
+
+`Hủy`
+
+`Xác nhận NCC & Giá`
+
+Confirm action saves the mock BOM decision:
+
+- Final Selected Supplier.
+- Final Unit Price.
+- calculated Amount.
+- manually selected eligible procurement status, when changed.
+
+Then update the BOM row.
+
+---
+
+### Edit BOM Boundary
+
+Existing open rule remains:
+
+If purchasing has already started, changing BOM quantity is still:
+
+`DEFERRED_TO_PROTOTYPE_REVIEW`
+
+Display the existing warning/placeholder.
+
+Do not invent BOM versioning or post-purchase reconciliation.
+
+---
+
+### Import BOM Boundary
+
+`Import BOM`
+
+remains a placeholder.
+
+Do not define:
+
+- Excel schema.
+- mapping.
+- preview contract.
+- append/replace behavior.
+- Material creation behavior.
+- error contract.
+
+unless separately authorized.
 
 ---
 
