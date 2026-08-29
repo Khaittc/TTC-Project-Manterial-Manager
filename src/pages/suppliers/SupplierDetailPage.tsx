@@ -20,7 +20,7 @@ import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 export const SupplierDetailPage: React.FC = () => {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
-  const { suppliers, materials, prices, categories, canDo, saveBulkSupplierPrices } = useApp();
+  const { suppliers, materials, prices, categories, manufacturers, canDo, saveBulkSupplierPrices } = useApp();
 
   const supplier = suppliers.find((s) => s.id === supplierId);
   const [activeTab, setActiveTab] = useState<'info' | 'prices'>('info');
@@ -61,8 +61,7 @@ export const SupplierDetailPage: React.FC = () => {
   // Preferred Conflict state
   const [preferredConfirm, setPreferredConfirm] = useState<{
     isOpen: boolean;
-    materialId: string;
-    oldSupplierName: string;
+    conflicts: { materialModel: string; manufacturerName: string; oldSupplierName: string }[];
     draftStateToApply: Record<string, { currentPrice: string; isPreferred: boolean }>;
   } | null>(null);
 
@@ -163,7 +162,8 @@ export const SupplierDetailPage: React.FC = () => {
     }
 
     // Check for Preferred conflict
-    let conflictFound = false;
+    const conflicts: { materialModel: string; manufacturerName: string; oldSupplierName: string }[] = [];
+    
     for (const p of supplierPrices) {
       const d = editDraft[p.id];
       if (d && d.isPreferred && !p.isPreferred) {
@@ -173,19 +173,25 @@ export const SupplierDetailPage: React.FC = () => {
         );
         if (existingPreferred) {
           const oldSupplier = suppliers.find((s) => s.id === existingPreferred.supplierId);
-          setPreferredConfirm({
-            isOpen: true,
-            materialId: p.materialId,
+          const mat = materials.find((m) => m.id === p.materialId);
+          const mfg = manufacturers.find((m) => m.id === mat?.manufacturerId);
+          
+          conflicts.push({
+            materialModel: mat?.model || '—',
+            manufacturerName: mfg?.name || '—',
             oldSupplierName: oldSupplier?.name || 'Nhà cung cấp khác',
-            draftStateToApply: editDraft,
           });
-          conflictFound = true;
-          break; // Show one conflict at a time for simplicity
         }
       }
     }
 
-    if (!conflictFound) {
+    if (conflicts.length > 0) {
+      setPreferredConfirm({
+        isOpen: true,
+        conflicts,
+        draftStateToApply: editDraft,
+      });
+    } else {
       processSave(editDraft);
     }
   };
@@ -372,6 +378,7 @@ export const SupplierDetailPage: React.FC = () => {
                     filteredMaterials.map(({ price: p, mat }) => {
                       if (!mat) return null;
                       const category = categories.find((c) => c.id === mat.categoryId);
+                      const manufacturer = manufacturers.find((m) => m.id === mat.manufacturerId);
                       const delta = calculatePriceDelta(p.currentPrice, p.previousPrice);
                       const draft = editDraft[p.id];
                       const error = validationErrors[p.id];
@@ -379,7 +386,7 @@ export const SupplierDetailPage: React.FC = () => {
                       return (
                         <tr key={p.id} className="hover:bg-slate-50 transition">
                           <td className="px-3 py-3">{category?.name || '—'}</td>
-                          <td className="px-3 py-3 font-semibold">{mat.manufacturerId}</td>
+                          <td className="px-3 py-3 font-semibold">{manufacturer?.name || '—'}</td>
                           <td className="px-3 py-3 font-bold text-slate-900 font-mono">{mat.model}</td>
                           <td className="px-3 py-3 text-slate-700 truncate max-w-[200px]" title={mat.description}>
                             {mat.description || '—'}
@@ -477,7 +484,21 @@ export const SupplierDetailPage: React.FC = () => {
         <ConfirmDialog
           isOpen={preferredConfirm.isOpen}
           title="Xác nhận thay đổi nhà cung cấp ưu tiên"
-          message={`Vật tư này hiện đang có Nhà cung cấp ưu tiên là "${preferredConfirm.oldSupplierName}". Việc chọn nhà cung cấp hiện tại làm ưu tiên sẽ thay thế cấu hình cũ. Bạn có chắc chắn muốn thay đổi không?`}
+          message={
+            <div className="space-y-3">
+              <p>Các vật tư sau đang có Nhà cung cấp ưu tiên khác:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                {preferredConfirm.conflicts.map((c, i) => (
+                  <li key={i}>
+                    <span className="font-semibold">{c.manufacturerName} | {c.materialModel}</span>
+                    <br />
+                    <span className="text-slate-500">{c.oldSupplierName} &rarr; {supplier.name}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="pt-2 font-medium">Xác nhận thay thế Nhà cung cấp ưu tiên cho các vật tư trên?</p>
+            </div>
+          }
           onConfirm={() => {
             processSave(preferredConfirm.draftStateToApply);
           }}
