@@ -823,7 +823,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <option value="AWAITING_QUOTATION">Đang chờ báo giá</option>
                 <option value="AWAITING_PAYMENT">Chờ thanh toán</option>
                 <option value="ORDERED">Đã đặt hàng</option>
-                <option value="PARTIALLY_RECEIVED">Đã nhận 1 phần</option>
+                <option value="PARTIALLY_RECEIVED">Đã nhận x / y</option>
                 <option value="FULLY_RECEIVED">Đã nhận đủ</option>
                 <option value="RETURN_OR_EXCHANGE">Đang trả hàng / đổi hàng</option>
               </select>

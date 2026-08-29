@@ -95,8 +95,10 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
         setDraftFinalUnitPrice('');
       }
 
-      // Initial pre-receiving status draft
-      if (bomItem.procurementStatus && bomItem.procurementStatus !== 'RETURN_OR_EXCHANGE') {
+      // Initial pre-receiving status draft or exception preservation
+      if (bomItem.procurementStatus === 'RETURN_OR_EXCHANGE') {
+        setDraftStatus('RETURN_OR_EXCHANGE');
+      } else if (bomItem.procurementStatus) {
         setDraftStatus(bomItem.procurementStatus);
       } else if (bomItem.status === 'PURCHASING') {
         setDraftStatus('ORDERED');
@@ -140,7 +142,13 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
       ? bomItem.bomQty * draftFinalUnitPrice
       : 0;
 
+  const isExceptionActive = bomItem.procurementStatus === 'RETURN_OR_EXCHANGE';
+
   const executeSaveDecision = () => {
+    if (isExceptionActive) {
+      addToast('warning', 'Mục BOM đang ở trạng thái Đang trả hàng / đổi hàng. Quy trình kết thúc trả / đổi hàng chưa được chốt trong SPEC.');
+      return;
+    }
     const finalPriceNum = Number(draftFinalUnitPrice);
     const result = saveBOMPurchaseDecision({
       bomItemId: bomItem.id,
@@ -160,6 +168,11 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
   const handleConfirmClick = () => {
     if (!canSelectSupplier) {
       addToast('error', 'Bạn không có quyền chọn Nhà cung cấp (bom.select_supplier).');
+      return;
+    }
+
+    if (isExceptionActive) {
+      addToast('warning', 'Không thể cập nhật tiến độ mua hàng thông thường khi đang ở trạng thái ngoại lệ Đang trả hàng / đổi hàng.');
       return;
     }
 
@@ -479,7 +492,26 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
               <span className="text-[10px] text-slate-400">Pre-receiving states</span>
             </div>
 
-            {isReceivingDerived ? (
+            {isExceptionActive ? (
+              <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 space-y-2 text-xs text-rose-900">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-rose-800">
+                      Trạng thái hiện tại: Đang trả hàng / đổi hàng
+                    </p>
+                    <p className="text-[11px] text-rose-700 mt-1 leading-relaxed">
+                      Quy trình kết thúc xử lý trả / đổi hàng chưa được chốt trong SPEC. Chờ chốt SPEC.
+                    </p>
+                    {bomItem.procurementNote && (
+                      <div className="mt-2 p-2 bg-white/80 rounded border border-rose-200 text-[11px] text-slate-700">
+                        <span className="font-semibold text-rose-800">Ghi chú trả/đổi:</span> {bomItem.procurementNote}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : isReceivingDerived ? (
               <div className="p-3 rounded bg-amber-50 border border-amber-200 flex items-start gap-2 text-xs text-amber-800">
                 <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
@@ -565,15 +597,27 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
+            {isExceptionActive && (
+              <span className="text-[11px] text-rose-600 italic mr-1">
+                Quy trình kết thúc trả / đổi hàng chưa được chốt trong SPEC.
+              </span>
+            )}
             <button
               type="button"
-              disabled={!canSelectSupplier}
+              disabled={!canSelectSupplier || isExceptionActive}
               onClick={handleConfirmClick}
               className={`px-5 py-2 text-xs font-bold rounded shadow-2xs transition flex items-center gap-1.5 ${
-                canSelectSupplier
+                canSelectSupplier && !isExceptionActive
                   ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed'
               }`}
+              title={
+                isExceptionActive
+                  ? 'Quy trình kết thúc trả / đổi hàng chưa được chốt trong SPEC.'
+                  : !canSelectSupplier
+                  ? 'Bạn không có quyền chọn Nhà cung cấp'
+                  : 'Xác nhận Nhà cung cấp & Giá chốt'
+              }
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Xác nhận NCC & Giá</span>
