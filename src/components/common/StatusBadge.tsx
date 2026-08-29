@@ -39,7 +39,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, customLa
       colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       break;
     case 'FULFILLED':
-      label = customLabel || 'Đã đủ';
+    case 'FULLY_RECEIVED':
+      label = customLabel || 'Đã nhận đủ';
       colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       break;
     case 'AVAILABLE':
@@ -53,13 +54,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, customLa
       colorClass = 'bg-blue-50 text-blue-700 border-blue-200';
       break;
     case 'PURCHASING':
-      label = customLabel || 'Đang mua';
+    case 'ORDERED':
+      label = customLabel || 'Đã đặt hàng';
       colorClass = 'bg-blue-50 text-blue-700 border-blue-200';
       break;
 
     // Orange/Yellow
     case 'PARTIALLY_RECEIVED':
       label = customLabel || 'Nhận 1 phần';
+      colorClass = 'bg-amber-50 text-amber-800 border-amber-200';
+      break;
+    case 'AWAITING_PAYMENT':
+      label = customLabel || 'Chờ thanh toán';
       colorClass = 'bg-amber-50 text-amber-800 border-amber-200';
       break;
     case 'ON_HOLD':
@@ -84,13 +90,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, customLa
       break;
 
     // Red
+    case 'RETURN_OR_EXCHANGE':
+      label = customLabel || 'Đang trả / đổi hàng';
+      colorClass = 'bg-rose-50 text-rose-700 border-rose-200';
+      break;
     case 'ATTENTION_NEEDED':
       label = customLabel || 'Cần chú ý';
       colorClass = 'bg-rose-50 text-rose-700 border-rose-200';
       break;
     case 'NOT_PURCHASED':
-      label = customLabel || 'Chưa mua';
-      colorClass = 'bg-slate-100 text-slate-600 border-slate-200';
+    case 'AWAITING_QUOTATION':
+      label = customLabel || 'Đang chờ báo giá';
+      colorClass = 'bg-slate-100 text-slate-700 border-slate-200';
+      break;
+    case 'INTERNAL_REVIEW':
+      label = customLabel || 'Kiểm tra nội bộ';
+      colorClass = 'bg-slate-100 text-slate-700 border-slate-200';
       break;
     case 'NOT_AVAILABLE':
       label = customLabel || 'Chưa có';

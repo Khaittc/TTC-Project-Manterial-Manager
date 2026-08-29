@@ -36,8 +36,60 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { SpecBadge } from '../../components/common/SpecBadge';
 import { PlaceholderDialog } from '../../components/dialogs/PlaceholderDialog';
+import { SupplierPriceDrawer } from '../../components/bom/SupplierPriceDrawer';
 import { formatDate, formatCurrency, formatQuantity } from '../../domain/mockRules';
 import { Project, ProjectStatus, ProjectBOMItem } from '../../domain/types';
+
+// Helper for transitional procurement status display in REQ-04C
+export function getBOMProcurementStatus(b: ProjectBOMItem): {
+  token: string;
+  label: string;
+  isReceivingDerived: boolean;
+} {
+  // Precedence 1: Derived from goods receiving
+  if (b.projectReceivedQty !== undefined && b.projectReceivedQty >= b.bomQty && b.bomQty > 0) {
+    return {
+      token: 'FULLY_RECEIVED',
+      label: 'Đã nhận đủ',
+      isReceivingDerived: true,
+    };
+  }
+  if (b.projectReceivedQty !== undefined && b.projectReceivedQty > 0 && b.projectReceivedQty < b.bomQty) {
+    return {
+      token: 'PARTIALLY_RECEIVED',
+      label: `Đã nhận ${b.projectReceivedQty} / ${b.bomQty}`,
+      isReceivingDerived: true,
+    };
+  }
+  // Legacy mock data compatibility
+  if (b.status === 'FULFILLED') {
+    return {
+      token: 'FULLY_RECEIVED',
+      label: 'Đã nhận đủ',
+      isReceivingDerived: true,
+    };
+  }
+  if (b.status === 'PARTIALLY_RECEIVED') {
+    return {
+      token: 'PARTIALLY_RECEIVED',
+      label: `Đã nhận ${b.projectReceivedQty || 1} / ${b.bomQty}`,
+      isReceivingDerived: true,
+    };
+  }
+  if (b.status === 'PURCHASING') {
+    return {
+      token: 'ORDERED',
+      label: 'Đã đặt hàng',
+      isReceivingDerived: false,
+    };
+  }
+  // Default / NOT_PURCHASED
+  return {
+    token: 'AWAITING_QUOTATION',
+    label: 'Đang chờ báo giá',
+    isReceivingDerived: false,
+  };
+}
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -48,6 +100,7 @@ export const ProjectDetailPage: React.FC = () => {
     boms,
     invoices,
     suppliers,
+    prices,
     categories,
     manufacturers,
     materials,
@@ -84,8 +137,12 @@ export const ProjectDetailPage: React.FC = () => {
   const [bomSearch, setBomSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedManufacturer, setSelectedManufacturer] = useState('ALL');
-  const [supplierStatusFilter, setSupplierStatusFilter] = useState<'ALL' | 'UNASSIGNED' | 'ASSIGNED'>('ALL');
+  const [procurementStatusFilter, setProcurementStatusFilter] = useState<string>('ALL');
   const [isBomEditMode, setIsBomEditMode] = useState(false);
+
+  // Supplier & Price Right Drawer State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeDrawerBOMItem, setActiveDrawerBOMItem] = useState<ProjectBOMItem | null>(null);
 
   // Placeholder dialogs
   const [isImportPlaceholderOpen, setIsImportPlaceholderOpen] = useState(false);
@@ -131,17 +188,17 @@ export const ProjectDetailPage: React.FC = () => {
         return false;
       }
 
-      // 4. Supplier status filter: Chưa chọn NCC (finalSupplierId == null) vs Đã chọn NCC (finalSupplierId != null)
-      if (supplierStatusFilter === 'UNASSIGNED' && b.finalSupplierId !== null) {
-        return false;
-      }
-      if (supplierStatusFilter === 'ASSIGNED' && b.finalSupplierId === null) {
-        return false;
+      // 4. Procurement status filter
+      if (procurementStatusFilter !== 'ALL') {
+        const statusInfo = getBOMProcurementStatus(b);
+        if (statusInfo.token !== procurementStatusFilter) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [projectBOMs, materials, bomSearch, selectedCategory, selectedManufacturer, supplierStatusFilter]);
+  }, [projectBOMs, materials, bomSearch, selectedCategory, selectedManufacturer, procurementStatusFilter]);
 
   // Project Invoices
   const projectInvoices = useMemo(() => {
@@ -751,14 +808,14 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: BOM & NHÀ CUNG CẤP (REQ-04C CANONICAL BOM STRUCTURE) */}
+      {/* TAB 2: BOM & NHÀ CUNG CẤP (REQ-04C CANONICAL BOM STRUCTURE & SUPPLIER DRAWER) */}
       {activeTab === 'bom' && (
         <div className="space-y-4">
           {/* Exact Toolbar */}
           <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[300px]">
               {/* Search Model / Description */}
-              <div className="relative min-w-[220px] max-w-xs flex-1">
+              <div className="relative min-w-[200px] max-w-xs flex-1">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
@@ -797,15 +854,20 @@ export const ProjectDetailPage: React.FC = () => {
                 ))}
               </select>
 
-              {/* Supplier Status Filter */}
+              {/* Procurement Status Filter */}
               <select
-                value={supplierStatusFilter}
-                onChange={(e) => setSupplierStatusFilter(e.target.value as 'ALL' | 'UNASSIGNED' | 'ASSIGNED')}
+                value={procurementStatusFilter}
+                onChange={(e) => setProcurementStatusFilter(e.target.value)}
                 className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="ALL">Tất cả trạng thái NCC</option>
-                <option value="UNASSIGNED">Chưa chọn NCC</option>
-                <option value="ASSIGNED">Đã chọn NCC</option>
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="INTERNAL_REVIEW">Kiểm tra nội bộ</option>
+                <option value="AWAITING_QUOTATION">Đang chờ báo giá</option>
+                <option value="AWAITING_PAYMENT">Chờ thanh toán</option>
+                <option value="ORDERED">Đã đặt hàng</option>
+                <option value="PARTIALLY_RECEIVED">Đã nhận x / y</option>
+                <option value="FULLY_RECEIVED">Đã nhận đủ</option>
+                <option value="RETURN_OR_EXCHANGE">Đang trả hàng / đổi hàng</option>
               </select>
             </div>
 
@@ -833,54 +895,42 @@ export const ProjectDetailPage: React.FC = () => {
                   }`}
                 >
                   {isBomEditMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
-                  <span>{isBomEditMode ? 'Kết thúc chỉnh sửa' : 'Edit BOM'}</span>
+                  <span>{isBomEditMode ? 'Kết thúc chỉnh sửa' : 'Chỉnh sửa BOM'}</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Exact 15-Column BOM Table */}
+          {/* Canonical 9-Column BOM Table */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold whitespace-nowrap">
-                    {/* Exact Column 1 */}
+                    {/* 1. Nhóm vật tư */}
                     <th className="p-3">Nhóm vật tư</th>
-                    {/* Exact Column 2 */}
+                    {/* 2. Hãng */}
                     <th className="p-3">Hãng</th>
-                    {/* Exact Column 3 */}
+                    {/* 3. Model */}
                     <th className="p-3">Model</th>
-                    {/* Exact Column 4 */}
+                    {/* 4. Mô tả */}
                     <th className="p-3">Mô tả</th>
-                    {/* Exact Column 5 */}
-                    <th className="p-3 text-right">SL BOM</th>
-                    {/* Exact Column 6 */}
+                    {/* 5. Số lượng */}
+                    <th className="p-3 text-right">Số lượng</th>
+                    {/* 6. ĐVT */}
                     <th className="p-3">ĐVT</th>
-                    {/* Exact Column 7 */}
-                    <th className="p-3 text-right">Giá thấp nhất</th>
-                    {/* Exact Column 8 */}
-                    <th className="p-3">NCC giá thấp nhất</th>
-                    {/* Exact Column 9 */}
-                    <th className="p-3">NCC ưu tiên</th>
-                    {/* Exact Column 10 */}
-                    <th className="p-3 text-right">Giá ưu tiên</th>
-                    {/* Exact Column 11 */}
-                    <th className="p-3">NCC cuối cùng</th>
-                    {/* Exact Column 12 */}
-                    <th className="p-3 text-right">Đơn giá cuối</th>
-                    {/* Exact Column 13 */}
-                    <th className="p-3 text-right">Thành tiền</th>
-                    {/* Exact Column 14 */}
+                    {/* 7. Nhà cung cấp */}
+                    <th className="p-3">Nhà cung cấp</th>
+                    {/* 8. Trạng thái */}
                     <th className="p-3 text-center">Trạng thái</th>
-                    {/* Exact Column 15 */}
+                    {/* 9. Thao tác */}
                     <th className="p-3 text-center">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredBOMs.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="p-8 text-center text-slate-500">
+                      <td colSpan={9} className="p-8 text-center text-slate-500">
                         Không tìm thấy vật tư BOM nào phù hợp với bộ lọc.
                       </td>
                     </tr>
@@ -890,9 +940,8 @@ export const ProjectDetailPage: React.FC = () => {
                       const cat = categories.find((c) => c.id === mat?.categoryId);
                       const mfg = manufacturers.find((m) => m.id === mat?.manufacturerId);
                       const uom = uoms.find((u) => u.id === mat?.uomId);
-                      const cheapestSup = suppliers.find((s) => s.id === b.cheapestSupplierId);
-                      const prefSup = suppliers.find((s) => s.id === b.preferredSupplierId);
                       const finalSup = suppliers.find((s) => s.id === b.finalSupplierId);
+                      const statusInfo = getBOMProcurementStatus(b);
 
                       return (
                         <tr key={b.id} className="hover:bg-slate-50/70 transition">
@@ -906,11 +955,11 @@ export const ProjectDetailPage: React.FC = () => {
                           <td className="p-3 font-semibold text-slate-900 whitespace-nowrap">{mat?.model || '—'}</td>
 
                           {/* 4. Mô tả */}
-                          <td className="p-3 text-slate-600 max-w-[220px] truncate" title={mat?.description}>
+                          <td className="p-3 text-slate-600 max-w-[260px] truncate" title={mat?.description}>
                             {mat?.description || '—'}
                           </td>
 
-                          {/* 5. SL BOM */}
+                          {/* 5. Số lượng */}
                           <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap">
                             {formatQuantity(b.bomQty)}
                           </td>
@@ -918,54 +967,46 @@ export const ProjectDetailPage: React.FC = () => {
                           {/* 6. ĐVT */}
                           <td className="p-3 text-slate-600 whitespace-nowrap">{uom?.code || '—'}</td>
 
-                          {/* 7. Giá thấp nhất */}
-                          <td className="p-3 text-right text-slate-700 whitespace-nowrap">
-                            {b.cheapestPrice ? formatCurrency(b.cheapestPrice) : '—'}
+                          {/* 7. Nhà cung cấp (Final Selected Supplier) */}
+                          <td className="p-3 text-slate-800 whitespace-nowrap">
+                            {finalSup ? (
+                              <span className="font-medium text-slate-900">{finalSup.name}</span>
+                            ) : (
+                              <span className="text-slate-400 italic">Chưa chọn NCC</span>
+                            )}
                           </td>
 
-                          {/* 8. NCC giá thấp nhất */}
-                          <td className="p-3 text-slate-700 whitespace-nowrap">{cheapestSup?.name || '—'}</td>
-
-                          {/* 9. NCC ưu tiên */}
-                          <td className="p-3 text-slate-700 whitespace-nowrap">{prefSup?.name || '—'}</td>
-
-                          {/* 10. Giá ưu tiên */}
-                          <td className="p-3 text-right text-slate-700 whitespace-nowrap">
-                            {b.preferredPrice ? formatCurrency(b.preferredPrice) : '—'}
-                          </td>
-
-                          {/* 11. NCC cuối cùng */}
-                          <td className="p-3 text-slate-700 whitespace-nowrap">{finalSup?.name || '—'}</td>
-
-                          {/* 12. Đơn giá cuối */}
-                          <td className="p-3 text-right font-semibold text-slate-900 whitespace-nowrap">
-                            {b.finalUnitPrice ? formatCurrency(b.finalUnitPrice) : '—'}
-                          </td>
-
-                          {/* 13. Thành tiền */}
-                          <td className="p-3 text-right font-bold text-blue-700 whitespace-nowrap">
-                            {b.totalAmount ? formatCurrency(b.totalAmount) : '—'}
-                          </td>
-
-                          {/* 14. Trạng thái */}
+                          {/* 8. Trạng thái (Procurement Status) */}
                           <td className="p-3 text-center whitespace-nowrap">
-                            <StatusBadge status={b.status} type="bom" />
+                            <StatusBadge status={statusInfo.token} customLabel={statusInfo.label} type="bom" />
                           </td>
 
-                          {/* 15. Thao tác */}
+                          {/* 9. Thao tác */}
                           <td className="p-3 text-center whitespace-nowrap">
-                            {isBomEditMode && canEditBOM ? (
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => handleEditBOMRow(b)}
-                                className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
-                                title="Chỉnh sửa SL BOM"
+                                onClick={() => {
+                                  setActiveDrawerBOMItem(b);
+                                  setIsDrawerOpen(true);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 transition flex items-center gap-1"
+                                title="Xem / Chọn NCC & Giá"
                               >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Xem / Chọn NCC & Giá</span>
                               </button>
-                            ) : (
-                              <span className="text-slate-300">—</span>
-                            )}
+
+                              {isBomEditMode && canEditBOM && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditBOMRow(b)}
+                                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition border border-slate-200"
+                                  title="Chỉnh sửa số lượng BOM"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1223,6 +1264,36 @@ export const ProjectDetailPage: React.FC = () => {
         description="Behavior chỉnh BOM sau khi bắt đầu mua hàng chưa được chốt trong SPEC. Chờ chốt SPEC."
         onClose={() => setIsPostPurchasePlaceholderOpen(false)}
       />
+
+      {/* Supplier & Price Right Drawer (REQ-04C) */}
+      {(() => {
+        if (!activeDrawerBOMItem) return null;
+        const drawerMat = materials.find((m) => m.id === activeDrawerBOMItem.materialId);
+        const drawerCat = categories.find((c) => c.id === drawerMat?.categoryId);
+        const drawerMfg = manufacturers.find((m) => m.id === drawerMat?.manufacturerId);
+        const drawerUom = uoms.find((u) => u.id === drawerMat?.uomId);
+        const drawerStatusInfo = getBOMProcurementStatus(activeDrawerBOMItem);
+
+        return (
+          <SupplierPriceDrawer
+            isOpen={isDrawerOpen}
+            onClose={() => {
+              setIsDrawerOpen(false);
+              setActiveDrawerBOMItem(null);
+            }}
+            bomItem={activeDrawerBOMItem}
+            material={drawerMat}
+            category={drawerCat}
+            manufacturer={drawerMfg}
+            uom={drawerUom}
+            suppliers={suppliers}
+            prices={prices}
+            currentProcurementStatusDisplay={drawerStatusInfo.label}
+            isReceivingDerived={drawerStatusInfo.isReceivingDerived}
+            onShowNotice={(msg) => addToast('info', msg)}
+          />
+        );
+      })()}
     </div>
   );
 };
