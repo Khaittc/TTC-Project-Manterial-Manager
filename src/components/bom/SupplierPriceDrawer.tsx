@@ -147,7 +147,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
               </h2>
             </div>
 
-            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed" title={material.description}>
+            <p className="text-xs text-slate-600 leading-relaxed break-words" title={material.description}>
               {material.description}
             </p>
 

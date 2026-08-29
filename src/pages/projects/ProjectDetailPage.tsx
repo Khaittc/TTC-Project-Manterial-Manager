@@ -901,43 +901,40 @@ export const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Canonical 9-Column BOM Table */}
+          {/* Canonical 8-Column BOM Table */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold whitespace-nowrap">
-                    {/* 1. Nhóm vật tư */}
-                    <th className="p-3">Nhóm vật tư</th>
-                    {/* 2. Hãng */}
+                    {/* 1. Hãng */}
                     <th className="p-3">Hãng</th>
-                    {/* 3. Model */}
+                    {/* 2. Model */}
                     <th className="p-3">Model</th>
-                    {/* 4. Mô tả */}
+                    {/* 3. Mô tả */}
                     <th className="p-3">Mô tả</th>
-                    {/* 5. Số lượng */}
+                    {/* 4. Số lượng */}
                     <th className="p-3 text-right">Số lượng</th>
-                    {/* 6. ĐVT */}
+                    {/* 5. ĐVT */}
                     <th className="p-3">ĐVT</th>
-                    {/* 7. Nhà cung cấp */}
+                    {/* 6. Nhà cung cấp */}
                     <th className="p-3">Nhà cung cấp</th>
-                    {/* 8. Trạng thái */}
+                    {/* 7. Trạng thái */}
                     <th className="p-3 text-center">Trạng thái</th>
-                    {/* 9. Thao tác */}
+                    {/* 8. Thao tác */}
                     <th className="p-3 text-center">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredBOMs.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="p-8 text-center text-slate-500">
+                      <td colSpan={8} className="p-8 text-center text-slate-500">
                         Không tìm thấy vật tư BOM nào phù hợp với bộ lọc.
                       </td>
                     </tr>
                   ) : (
                     filteredBOMs.map((b) => {
                       const mat = materials.find((m) => m.id === b.materialId);
-                      const cat = categories.find((c) => c.id === mat?.categoryId);
                       const mfg = manufacturers.find((m) => m.id === mat?.manufacturerId);
                       const uom = uoms.find((u) => u.id === mat?.uomId);
                       const finalSup = suppliers.find((s) => s.id === b.finalSupplierId);
@@ -945,30 +942,27 @@ export const ProjectDetailPage: React.FC = () => {
 
                       return (
                         <tr key={b.id} className="hover:bg-slate-50/70 transition">
-                          {/* 1. Nhóm vật tư */}
-                          <td className="p-3 text-slate-700 whitespace-nowrap">{cat?.name || '—'}</td>
+                          {/* 1. Hãng */}
+                          <td className="p-3 text-slate-700 whitespace-nowrap align-top">{mfg?.name || '—'}</td>
 
-                          {/* 2. Hãng */}
-                          <td className="p-3 text-slate-700 whitespace-nowrap">{mfg?.name || '—'}</td>
+                          {/* 2. Model */}
+                          <td className="p-3 font-semibold text-slate-900 whitespace-nowrap align-top">{mat?.model || '—'}</td>
 
-                          {/* 3. Model */}
-                          <td className="p-3 font-semibold text-slate-900 whitespace-nowrap">{mat?.model || '—'}</td>
-
-                          {/* 4. Mô tả */}
-                          <td className="p-3 text-slate-600 max-w-[260px] truncate" title={mat?.description}>
+                          {/* 3. Mô tả (Full content with auto-wrap, no truncation) */}
+                          <td className="p-3 text-slate-600 whitespace-normal break-words min-w-[320px] max-w-[480px] leading-relaxed align-top">
                             {mat?.description || '—'}
                           </td>
 
-                          {/* 5. Số lượng */}
-                          <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap">
+                          {/* 4. Số lượng */}
+                          <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap align-top">
                             {formatQuantity(b.bomQty)}
                           </td>
 
-                          {/* 6. ĐVT */}
-                          <td className="p-3 text-slate-600 whitespace-nowrap">{uom?.code || '—'}</td>
+                          {/* 5. ĐVT */}
+                          <td className="p-3 text-slate-600 whitespace-nowrap align-top">{uom?.code || '—'}</td>
 
-                          {/* 7. Nhà cung cấp (Final Selected Supplier) */}
-                          <td className="p-3 text-slate-800 whitespace-nowrap">
+                          {/* 6. Nhà cung cấp (Final Selected Supplier) */}
+                          <td className="p-3 text-slate-800 whitespace-nowrap align-top">
                             {finalSup ? (
                               <span className="font-medium text-slate-900">{finalSup.name}</span>
                             ) : (
@@ -976,13 +970,13 @@ export const ProjectDetailPage: React.FC = () => {
                             )}
                           </td>
 
-                          {/* 8. Trạng thái (Procurement Status) */}
-                          <td className="p-3 text-center whitespace-nowrap">
+                          {/* 7. Trạng thái (Procurement Status) */}
+                          <td className="p-3 text-center whitespace-nowrap align-top">
                             <StatusBadge status={statusInfo.token} customLabel={statusInfo.label} type="bom" />
                           </td>
 
-                          {/* 9. Thao tác */}
-                          <td className="p-3 text-center whitespace-nowrap">
+                          {/* 8. Thao tác */}
+                          <td className="p-3 text-center whitespace-nowrap align-top">
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
@@ -1015,6 +1009,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
             {/* Table Footer count */}
             <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
               <span>Hiển thị {filteredBOMs.length} / {projectBOMs.length} dòng vật tư BOM</span>

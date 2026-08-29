@@ -693,15 +693,32 @@ Provide:
 
 The table MUST contain exactly these primary columns, in this order:
 
-1. `Nhóm vật tư`
-2. `Hãng`
-3. `Model`
-4. `Mô tả`
-5. `Số lượng`
-6. `ĐVT`
-7. `Nhà cung cấp`
-8. `Trạng thái`
-9. `Thao tác`
+1. `Hãng`
+2. `Model`
+3. `Mô tả`
+4. `Số lượng`
+5. `ĐVT`
+6. `Nhà cung cấp`
+7. `Trạng thái`
+8. `Thao tác`
+
+`Nhóm vật tư` is intentionally not displayed as a primary table column.
+
+Material Category remains available through the toolbar Category filter and underlying Material data.
+
+### Description Presentation
+
+The `Mô tả` column MUST display the full `Material.description`.
+
+The description:
+
+- may wrap to multiple lines;
+- must not be truncated;
+- must not use ellipsis;
+- must not use line-clamp;
+- must expand the BOM row height as needed.
+
+The user must be able to read the complete Material description directly from the Main BOM Table.
 
 Do NOT display the following as main-table columns:
 
