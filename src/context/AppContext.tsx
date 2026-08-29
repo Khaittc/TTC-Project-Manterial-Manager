@@ -815,11 +815,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Không tìm thấy mục BOM.' };
     }
 
-    // Validation 0: Check if Supplier is locked and user is attempting to change supplier
-    if (isBOMSupplierLocked(targetBOM) && targetBOM.finalSupplierId !== finalSupplierId) {
+    // Validation 0: Check if Supplier/Purchase decision is locked
+    if (isBOMSupplierLocked(targetBOM)) {
       return {
         success: false,
-        message: 'Nhà cung cấp đã được khóa sau khi đặt hàng hoặc phát sinh nhận hàng. Không thể thay đổi Nhà cung cấp.',
+        message: 'Quyết định mua hàng đã được khóa sau khi đặt hàng hoặc phát sinh nhận hàng. Chỉ được cập nhật giá mua thực tế.',
       };
     }
 
