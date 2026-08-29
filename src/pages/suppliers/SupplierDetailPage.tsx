@@ -185,8 +185,13 @@ export const SupplierDetailPage: React.FC = () => {
                         <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
                           {formatCurrency(p.currentPrice)}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-500">
-                          {p.previousPrice ? formatCurrency(p.previousPrice) : '—'}
+                        <td className="px-4 py-3 text-right">
+                          <div className="font-mono text-slate-500">
+                            {p.previousPrice ? formatCurrency(p.previousPrice) : '—'}
+                          </div>
+                          {p.previousDate && (
+                            <div className="text-[10px] text-slate-400 mt-0.5">{formatDate(p.previousDate)}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {delta.trend === 'INCREASED' ? (

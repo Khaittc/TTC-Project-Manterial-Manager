@@ -281,11 +281,11 @@ export const MaterialDetailPage: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-2xs space-y-3">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <Package className="w-4 h-4 text-emerald-600" />
-                <span>Tồn kho thực tế (mock)</span>
+                <span>Số lượng tồn kho (mock)</span>
               </h3>
 
               <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg">
-                <div className="text-[11px] text-emerald-800 font-medium">Tổng tồn kho khả dụng</div>
+                <div className="text-[11px] text-emerald-800 font-medium">Tồn kho hiện tại (mock)</div>
                 <div className="text-2xl font-bold font-mono text-emerald-900 mt-1">
                   {formatQuantity(material.stockQty)} <span className="text-sm font-sans font-medium text-emerald-700">{uom?.code}</span>
                 </div>
@@ -367,8 +367,13 @@ export const MaterialDetailPage: React.FC = () => {
                             {p.supplierProductCode || '—'}
                           </td>
 
-                          <td className="px-4 py-3 text-right font-mono text-slate-500">
-                            {p.previousPrice ? formatCurrency(p.previousPrice) : '—'}
+                          <td className="px-4 py-3 text-right">
+                            <div className="font-mono text-slate-500">
+                              {p.previousPrice ? formatCurrency(p.previousPrice) : '—'}
+                            </div>
+                            {p.previousDate && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">{formatDate(p.previousDate)}</div>
+                            )}
                           </td>
 
                           <td className="px-4 py-3 text-right font-mono font-bold text-slate-900 text-sm">

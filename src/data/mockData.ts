@@ -282,6 +282,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-001',
     supplierProductCode: 'SIE-CPU-1214C',
     previousPrice: 7800000,
+    previousDate: '2026-07-01',
     currentPrice: 8200000, // Increased
     currentDate: '2026-08-10',
     isPreferred: true,
@@ -292,6 +293,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'SIMATIC-1214C-DC',
     previousPrice: 8400000,
+    previousDate: '2026-07-01',
     currentPrice: 8100000, // Cheapest & Decreased
     currentDate: '2026-08-18',
     isPreferred: false,
@@ -302,6 +304,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-003',
     supplierProductCode: 'TP-SIE-1214C',
     previousPrice: 8350000,
+    previousDate: '2026-07-01',
     currentPrice: 8350000, // Unchanged
     currentDate: '2026-07-30',
     isPreferred: false,
@@ -314,6 +317,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-001',
     supplierProductCode: 'TP700-COMFORT-7',
     previousPrice: 28500000,
+    previousDate: '2026-07-01',
     currentPrice: 29200000, // Increased
     currentDate: '2026-08-05',
     isPreferred: true,
@@ -324,6 +328,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-004',
     supplierProductCode: 'MH-TP700C',
     previousPrice: 29000000,
+    previousDate: '2026-07-01',
     currentPrice: 28800000, // Cheapest & Decreased
     currentDate: '2026-08-20',
     isPreferred: false,
@@ -336,6 +341,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'SCH-A9F74216',
     previousPrice: 165000,
+    previousDate: '2026-07-01',
     currentPrice: 155000, // Cheapest & Preferred & Decreased
     currentDate: '2026-08-12',
     isPreferred: true,
@@ -346,6 +352,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-003',
     supplierProductCode: 'TP-MCB-2P16A',
     previousPrice: 160000,
+    previousDate: '2026-07-01',
     currentPrice: 162000, // Increased
     currentDate: '2026-08-01',
     isPreferred: false,
@@ -358,6 +365,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'SCH-A9F74332',
     previousPrice: 380000,
+    previousDate: '2026-07-01',
     currentPrice: 380000, // Unchanged & Preferred
     currentDate: '2026-08-02',
     isPreferred: true,
@@ -368,6 +376,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-003',
     supplierProductCode: 'TP-MCB-3P32A',
     previousPrice: 395000,
+    previousDate: '2026-07-01',
     currentPrice: 375000, // Cheapest
     currentDate: '2026-08-15',
     isPreferred: false,
@@ -380,6 +389,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'ABB-CRM-024DC',
     previousPrice: 95000,
+    previousDate: '2026-07-01',
     currentPrice: 92000, // Cheapest & Preferred & Decreased
     currentDate: '2026-08-11',
     isPreferred: true,
@@ -390,6 +400,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-004',
     supplierProductCode: 'MH-ABB-CRM4',
     previousPrice: 98000,
+    previousDate: '2026-07-01',
     currentPrice: 96000,
     currentDate: '2026-08-08',
     isPreferred: false,
@@ -402,6 +413,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-001',
     supplierProductCode: 'OMR-S8VK-240',
     previousPrice: 1950000,
+    previousDate: '2026-07-01',
     currentPrice: 2050000, // Increased & Preferred
     currentDate: '2026-08-14',
     isPreferred: true,
@@ -412,6 +424,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-003',
     supplierProductCode: 'TP-OMR-PSU240',
     previousPrice: 2100000,
+    previousDate: '2026-07-01',
     currentPrice: 1980000, // Cheapest
     currentDate: '2026-08-16',
     isPreferred: false,
@@ -424,6 +437,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-001',
     supplierProductCode: 'SIE-IM155-6PN',
     previousPrice: 5200000,
+    previousDate: '2026-07-01',
     currentPrice: 5450000, // Preferred & Increased
     currentDate: '2026-08-04',
     isPreferred: true,
@@ -434,6 +448,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-004',
     supplierProductCode: 'MH-IM155-6',
     previousPrice: 5350000,
+    previousDate: '2026-07-01',
     currentPrice: 5300000, // Cheapest
     currentDate: '2026-08-19',
     isPreferred: false,
@@ -446,6 +461,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'CBL-CAT6-STP',
     previousPrice: 18000,
+    previousDate: '2026-07-01',
     currentPrice: 17500, // Cheapest & Preferred
     currentDate: '2026-08-10',
     isPreferred: true,
@@ -458,6 +474,7 @@ export const INITIAL_PRICES: MaterialSupplierPrice[] = [
     supplierId: 'SUP-002',
     supplierProductCode: 'ABB-ZS4-D2-PE',
     previousPrice: 32000,
+    previousDate: '2026-07-01',
     currentPrice: 32000, // Unchanged & Preferred & Cheapest
     currentDate: '2026-08-01',
     isPreferred: true,

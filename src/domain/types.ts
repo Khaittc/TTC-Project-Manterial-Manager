@@ -79,6 +79,7 @@ export interface MaterialSupplierPrice {
   supplierId: string;
   supplierProductCode: string;
   previousPrice: number;
+  previousDate: string | null;
   currentPrice: number;
   currentDate: string;
   isPreferred: boolean;
