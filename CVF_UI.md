@@ -944,6 +944,29 @@ Confirm action saves the mock BOM decision:
 
 Then update the BOM row.
 
+### Final Supplier Lock Presentation
+
+When the BOM line is:
+
+- Đã đặt hàng
+- Đã nhận x / y
+- Đã nhận đủ
+- Đang trả hàng / đổi hàng
+
+Final Supplier is read-only and must display a locked indication.
+
+Supplier comparison remains visible but other Supplier rows are not selectable.
+
+`Đơn giá chốt` remains editable for authorized users.
+
+In locked states, the primary save action should clearly represent price-only persistence, for example:
+
+`Lưu giá mua thực tế`
+
+The action updates only Final Unit Price and Amount.
+
+It must not change Supplier or Procurement Status.
+
 ---
 
 ### Edit BOM Boundary

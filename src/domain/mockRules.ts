@@ -198,4 +198,26 @@ export function getBOMProcurementStatus(b: ProjectBOMItem): {
   };
 }
 
+/**
+ * Determines whether the Final Selected Supplier on a BOM item is locked.
+ *
+ * Final Supplier is locked after reaching ORDERED, after any Project receiving has occurred,
+ * or while in RETURN_OR_EXCHANGE exception state.
+ */
+export function isBOMSupplierLocked(b: ProjectBOMItem): boolean {
+  if (b.procurementStatus === 'ORDERED' || b.procurementStatus === 'RETURN_OR_EXCHANGE') {
+    return true;
+  }
+  if (b.projectReceivedQty !== undefined && b.projectReceivedQty > 0) {
+    return true;
+  }
+  if (b.status === 'PARTIALLY_RECEIVED' || b.status === 'FULFILLED') {
+    return true;
+  }
+  if (b.status === 'PURCHASING' && !b.procurementStatus) {
+    return true;
+  }
+  return false;
+}
+
 

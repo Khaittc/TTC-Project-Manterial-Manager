@@ -478,6 +478,31 @@ Calculation:
 
 `Amount = BOM Required Qty × Final Unit Price`
 
+### Final Supplier Lock After Order / Receiving
+
+Final Selected Supplier remains editable during pre-order procurement states:
+
+- Internal Review
+- Awaiting Quotation
+- Awaiting Payment
+
+Once a BOM line reaches Ordered, Final Selected Supplier becomes locked.
+
+Final Selected Supplier also remains locked after any Project receiving quantity has been recorded and while the BOM line is in Return / Exchange exception state.
+
+After Supplier lock, the user may still update Project Final Unit Price to reflect the actual negotiated purchase price.
+
+A post-lock Final Unit Price update recalculates BOM Amount but does not change:
+
+- Final Supplier;
+- Procurement Status;
+- Project Received Qty;
+- Supplier Current Price;
+- Preferred Supplier;
+- Inventory.
+
+Changing Supplier after it has been locked is not allowed in Prototype V0.
+
 ### BOM Procurement Status Model
 
 **Rule status:** `CONFIRMED_FOR_PROTOTYPE_V0`

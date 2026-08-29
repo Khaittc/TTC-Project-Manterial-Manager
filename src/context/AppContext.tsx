@@ -23,6 +23,7 @@ import { StorageService } from '../services/localStorageService';
 import { INITIAL_ACTION_ITEMS } from '../data/mockData';
 import { getEffectiveUIVisibility, hasActionPermission } from '../domain/permissions';
 import { ToastMessage } from '../components/dialogs/Toast';
+import { isBOMSupplierLocked } from '../domain/mockRules';
 
 interface AppContextType {
   // State
@@ -97,6 +98,10 @@ interface AppContextType {
     finalUnitPrice: number;
     procurementStatus: BOMProcurementStatus;
     procurementNote?: string;
+  }) => { success: boolean; message?: string };
+  updateBOMFinalUnitPrice: (payload: {
+    bomItemId: string;
+    finalUnitPrice: number;
   }) => { success: boolean; message?: string };
   markBOMReturnOrExchange: (payload: {
     bomItemId: string;
@@ -810,6 +815,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Không tìm thấy mục BOM.' };
     }
 
+    // Validation 0: Check if Supplier is locked and user is attempting to change supplier
+    if (isBOMSupplierLocked(targetBOM) && targetBOM.finalSupplierId !== finalSupplierId) {
+      return {
+        success: false,
+        message: 'Nhà cung cấp đã được khóa sau khi đặt hàng hoặc phát sinh nhận hàng. Không thể thay đổi Nhà cung cấp.',
+      };
+    }
+
     // Validation 1: If ORDERED is chosen, finalSupplierId must be provided
     if (procurementStatus === 'ORDERED' && !finalSupplierId) {
       return {
@@ -890,6 +903,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBOMs(nextBOMs);
     StorageService.saveBOMs(nextBOMs);
     addToast('success', 'Đã lưu quyết định Nhà cung cấp & Đơn giá chốt cho mục BOM.');
+    return { success: true };
+  };
+
+  const updateBOMFinalUnitPrice = ({
+    bomItemId,
+    finalUnitPrice,
+  }: {
+    bomItemId: string;
+    finalUnitPrice: number;
+  }): { success: boolean; message?: string } => {
+    const targetBOM = boms.find((b) => b.id === bomItemId);
+    if (!targetBOM) {
+      return { success: false, message: 'Không tìm thấy mục BOM.' };
+    }
+
+    if (typeof finalUnitPrice !== 'number' || isNaN(finalUnitPrice) || finalUnitPrice <= 0) {
+      return {
+        success: false,
+        message: 'Đơn giá chốt phải là số lớn hơn 0.',
+      };
+    }
+
+    const totalAmount = targetBOM.bomQty * finalUnitPrice;
+
+    const nextBOMs = boms.map((item) => {
+      if (item.id === bomItemId) {
+        return {
+          ...item,
+          finalUnitPrice,
+          totalAmount,
+        };
+      }
+      return item;
+    });
+
+    setBOMs(nextBOMs);
+    StorageService.saveBOMs(nextBOMs);
+    addToast('success', 'Đã cập nhật Đơn giá chốt (giá mua thực tế) cho mục BOM.');
     return { success: true };
   };
 
@@ -1449,6 +1500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveBulkSupplierPrices,
         setPreferredSupplier,
         saveBOMPurchaseDecision,
+        updateBOMFinalUnitPrice,
         markBOMReturnOrExchange,
         updateBOMItemQuantity,
         saveBOMItem,
