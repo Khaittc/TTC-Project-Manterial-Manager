@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Search,
   Upload,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -84,6 +85,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedManufacturer, setSelectedManufacturer] = useState('ALL');
   const [supplierStatusFilter, setSupplierStatusFilter] = useState<'ALL' | 'UNASSIGNED' | 'ASSIGNED'>('ALL');
+  const [isBomEditMode, setIsBomEditMode] = useState(false);
 
   // Placeholder dialogs
   const [isImportPlaceholderOpen, setIsImportPlaceholderOpen] = useState(false);
@@ -282,17 +284,12 @@ export const ProjectDetailPage: React.FC = () => {
     setEditBOMError(null);
   };
 
-  const handleToolbarEditBOMClick = () => {
+  const handleToggleBOMEditMode = () => {
     if (!canEditBOM) {
       addToast('error', 'Bạn không có quyền chỉnh sửa BOM.');
       return;
     }
-    if (filteredBOMs.length === 0) {
-      addToast('warning', 'Không có dòng BOM nào để chỉnh sửa.');
-      return;
-    }
-    // Edit the first row in the current filtered list
-    handleEditBOMRow(filteredBOMs[0]);
+    setIsBomEditMode((prev) => !prev);
   };
 
   const handleSaveBOMQty = (e: React.FormEvent) => {
@@ -803,7 +800,7 @@ export const ProjectDetailPage: React.FC = () => {
               {/* Supplier Status Filter */}
               <select
                 value={supplierStatusFilter}
-                onChange={(e) => setSupplierStatusFilter(e.target.value as any)}
+                onChange={(e) => setSupplierStatusFilter(e.target.value as 'ALL' | 'UNASSIGNED' | 'ASSIGNED')}
                 className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="ALL">Tất cả trạng thái NCC</option>
@@ -828,11 +825,15 @@ export const ProjectDetailPage: React.FC = () => {
               {canEditBOM && (
                 <button
                   type="button"
-                  onClick={handleToolbarEditBOMClick}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs"
+                  onClick={handleToggleBOMEditMode}
+                  className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs ${
+                    isBomEditMode
+                      ? 'bg-slate-800 hover:bg-slate-900 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit BOM</span>
+                  {isBomEditMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+                  <span>{isBomEditMode ? 'Kết thúc chỉnh sửa' : 'Edit BOM'}</span>
                 </button>
               )}
             </div>
@@ -953,7 +954,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                           {/* 15. Thao tác */}
                           <td className="p-3 text-center whitespace-nowrap">
-                            {canEditBOM ? (
+                            {isBomEditMode && canEditBOM ? (
                               <button
                                 type="button"
                                 onClick={() => handleEditBOMRow(b)}
@@ -1130,7 +1131,7 @@ export const ProjectDetailPage: React.FC = () => {
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Chỉnh sửa SL BOM</h3>
-                <p className="text-xs text-slate-500">Cập nhật số lượng dự toán cho dòng vật tư BOM</p>
+                <p className="text-xs text-slate-500">Cập nhật số lượng BOM cho dòng vật tư.</p>
               </div>
               <button
                 type="button"
