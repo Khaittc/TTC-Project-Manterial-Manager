@@ -6,6 +6,12 @@ export type ProjectStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'ATTENTION
 export type MasterStatus = 'ACTIVE' | 'INACTIVE';
 export type MaterialStatus = 'ACTIVE' | 'ARCHIVED';
 export type BOMMaterialStatus = 'NOT_PURCHASED' | 'PURCHASING' | 'PARTIALLY_RECEIVED' | 'FULFILLED';
+export type BOMProcurementStatus =
+  | 'INTERNAL_REVIEW'
+  | 'AWAITING_QUOTATION'
+  | 'AWAITING_PAYMENT'
+  | 'ORDERED'
+  | 'RETURN_OR_EXCHANGE';
 export type ReceivingStatus = 'NOT_RECEIVED' | 'PARTIALLY_RECEIVED' | 'FULFILLED';
 export type InvoiceStatus = 'NOT_AVAILABLE' | 'AVAILABLE';
 export type PriceTrend = 'INCREASED' | 'DECREASED' | 'UNCHANGED' | 'NO_PRICE';
@@ -100,6 +106,8 @@ export interface ProjectBOMItem {
   status: BOMMaterialStatus;
   projectReceivedQty: number;
   remainingQty: number;
+  procurementStatus?: BOMProcurementStatus;
+  procurementNote?: string;
   notes?: string;
 }
 

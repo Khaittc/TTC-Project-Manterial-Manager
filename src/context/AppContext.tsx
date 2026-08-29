@@ -9,6 +9,7 @@ import {
   Material,
   MaterialSupplierPrice,
   ProjectBOMItem,
+  BOMProcurementStatus,
   ProjectInvoice,
   User,
   Role,
@@ -90,7 +91,17 @@ interface AppContextType {
   setPreferredSupplier: (materialId: string, supplierId: string) => void;
 
   // BOM & Receiving & Invoices
-  updateBOMItemSupplier: (bomItemId: string, finalSupplierId: string | null) => void;
+  saveBOMPurchaseDecision: (payload: {
+    bomItemId: string;
+    finalSupplierId: string | null;
+    finalUnitPrice: number;
+    procurementStatus?: BOMProcurementStatus;
+    procurementNote?: string;
+  }) => { success: boolean; message?: string };
+  markBOMReturnOrExchange: (payload: {
+    bomItemId: string;
+    note?: string;
+  }) => { success: boolean; message?: string };
   updateBOMItemQuantity: (bomItemId: string, newQty: number) => void;
   saveBOMItem: (item: Partial<ProjectBOMItem>) => void;
   processGoodsReceiving: (payload: {
@@ -781,29 +792,143 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- BOM & Receiving Operations ---
-  const updateBOMItemSupplier = (bomItemId: string, finalSupplierId: string | null) => {
+  const saveBOMPurchaseDecision = ({
+    bomItemId,
+    finalSupplierId,
+    finalUnitPrice,
+    procurementStatus,
+    procurementNote,
+  }: {
+    bomItemId: string;
+    finalSupplierId: string | null;
+    finalUnitPrice: number;
+    procurementStatus?: BOMProcurementStatus;
+    procurementNote?: string;
+  }): { success: boolean; message?: string } => {
+    const targetBOM = boms.find((b) => b.id === bomItemId);
+    if (!targetBOM) {
+      return { success: false, message: 'Không tìm thấy mục BOM.' };
+    }
+
+    // Validation 1: If ORDERED is chosen, finalSupplierId must be provided
+    if (procurementStatus === 'ORDERED' && !finalSupplierId) {
+      return {
+        success: false,
+        message: 'Không thể đặt trạng thái "Đã đặt hàng" khi chưa chọn Nhà cung cấp.',
+      };
+    }
+
+    // Validation 2: If finalSupplierId is provided, validate supplier existence and status
+    if (finalSupplierId) {
+      const sup = suppliers.find((s) => s.id === finalSupplierId);
+      if (!sup) {
+        return { success: false, message: 'Nhà cung cấp đã chọn không tồn tại trong hệ thống.' };
+      }
+
+      // Check inactive supplier: cannot newly select an INACTIVE supplier
+      if (targetBOM.finalSupplierId !== finalSupplierId && sup.status === 'INACTIVE') {
+        return {
+          success: false,
+          message: `Nhà cung cấp "${sup.name}" đang ở trạng thái Ngưng hoạt động. Không thể chọn mới.`,
+        };
+      }
+
+      // Check Material + Supplier price relationship
+      const priceRel = prices.find((p) => p.materialId === targetBOM.materialId && p.supplierId === finalSupplierId);
+      if (!priceRel) {
+        return {
+          success: false,
+          message: 'Chưa có liên kết báo giá giữa Vật tư và Nhà cung cấp đã chọn.',
+        };
+      }
+
+      // Check Final Unit Price
+      if (typeof finalUnitPrice !== 'number' || isNaN(finalUnitPrice) || finalUnitPrice <= 0) {
+        return {
+          success: false,
+          message: 'Đơn giá chốt phải là số lớn hơn 0.',
+        };
+      }
+    }
+
+    const resolvedUnitPrice = finalSupplierId ? finalUnitPrice : 0;
+    const totalAmount = targetBOM.bomQty * resolvedUnitPrice;
+
+    // Determine legacy status mirror for backward compatibility
+    let legacyStatus = targetBOM.status;
+    if (targetBOM.projectReceivedQty >= targetBOM.bomQty && targetBOM.bomQty > 0) {
+      legacyStatus = 'FULFILLED';
+    } else if (targetBOM.projectReceivedQty > 0) {
+      legacyStatus = 'PARTIALLY_RECEIVED';
+    } else if (procurementStatus === 'INTERNAL_REVIEW' || procurementStatus === 'AWAITING_QUOTATION') {
+      legacyStatus = 'NOT_PURCHASED';
+    } else if (
+      procurementStatus === 'AWAITING_PAYMENT' ||
+      procurementStatus === 'ORDERED' ||
+      procurementStatus === 'RETURN_OR_EXCHANGE'
+    ) {
+      legacyStatus = 'PURCHASING';
+    } else if (finalSupplierId) {
+      legacyStatus = 'PURCHASING';
+    } else {
+      legacyStatus = 'NOT_PURCHASED';
+    }
+
     const nextBOMs = boms.map((item) => {
       if (item.id === bomItemId) {
-        let finalUnitPrice = 0;
-        if (finalSupplierId) {
-          const supplierPrice = prices.find((p) => p.materialId === item.materialId && p.supplierId === finalSupplierId);
-          finalUnitPrice = supplierPrice ? supplierPrice.currentPrice : 0;
-        }
-        const totalAmount = item.bomQty * finalUnitPrice;
         return {
           ...item,
           finalSupplierId,
-          finalUnitPrice,
+          finalUnitPrice: resolvedUnitPrice,
           totalAmount,
-          status: finalSupplierId ? (item.status === 'NOT_PURCHASED' ? 'PURCHASING' : item.status) : 'NOT_PURCHASED',
-        } as ProjectBOMItem;
+          procurementStatus: procurementStatus || item.procurementStatus,
+          procurementNote: procurementNote !== undefined ? procurementNote : item.procurementNote,
+          status: legacyStatus,
+        };
       }
       return item;
     });
 
     setBOMs(nextBOMs);
     StorageService.saveBOMs(nextBOMs);
-    addToast('success', 'Đã cập nhật Nhà cung cấp cuối cùng cho mục BOM.');
+    addToast('success', 'Đã lưu quyết định Nhà cung cấp & Đơn giá chốt cho mục BOM.');
+    return { success: true };
+  };
+
+  const markBOMReturnOrExchange = ({
+    bomItemId,
+    note,
+  }: {
+    bomItemId: string;
+    note?: string;
+  }): { success: boolean; message?: string } => {
+    const targetBOM = boms.find((b) => b.id === bomItemId);
+    if (!targetBOM) {
+      return { success: false, message: 'Không tìm thấy mục BOM.' };
+    }
+
+    if (!targetBOM.projectReceivedQty || targetBOM.projectReceivedQty <= 0) {
+      return {
+        success: false,
+        message: 'Chỉ có thể đánh dấu trả/đổi hàng khi đã có phát sinh nhận hàng thực tế (Số lượng đã nhận > 0).',
+      };
+    }
+
+    const nextBOMs = boms.map((item) => {
+      if (item.id === bomItemId) {
+        return {
+          ...item,
+          procurementStatus: 'RETURN_OR_EXCHANGE' as BOMProcurementStatus,
+          procurementNote: note || item.procurementNote || '',
+        };
+      }
+      return item;
+    });
+
+    setBOMs(nextBOMs);
+    StorageService.saveBOMs(nextBOMs);
+    addToast('success', 'Đã đánh dấu trạng thái Đang trả / đổi hàng cho mục BOM.');
+    return { success: true };
   };
 
   const updateBOMItemQuantity = (bomItemId: string, newQty: number) => {
@@ -1325,7 +1450,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveSupplierPrice,
         saveBulkSupplierPrices,
         setPreferredSupplier,
-        updateBOMItemSupplier,
+        saveBOMPurchaseDecision,
+        markBOMReturnOrExchange,
         updateBOMItemQuantity,
         saveBOMItem,
         processGoodsReceiving,

@@ -37,59 +37,8 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { SpecBadge } from '../../components/common/SpecBadge';
 import { PlaceholderDialog } from '../../components/dialogs/PlaceholderDialog';
 import { SupplierPriceDrawer } from '../../components/bom/SupplierPriceDrawer';
-import { formatDate, formatCurrency, formatQuantity } from '../../domain/mockRules';
+import { formatDate, formatCurrency, formatQuantity, getBOMProcurementStatus } from '../../domain/mockRules';
 import { Project, ProjectStatus, ProjectBOMItem } from '../../domain/types';
-
-// Helper for transitional procurement status display in REQ-04C
-export function getBOMProcurementStatus(b: ProjectBOMItem): {
-  token: string;
-  label: string;
-  isReceivingDerived: boolean;
-} {
-  // Precedence 1: Derived from goods receiving
-  if (b.projectReceivedQty !== undefined && b.projectReceivedQty >= b.bomQty && b.bomQty > 0) {
-    return {
-      token: 'FULLY_RECEIVED',
-      label: 'Đã nhận đủ',
-      isReceivingDerived: true,
-    };
-  }
-  if (b.projectReceivedQty !== undefined && b.projectReceivedQty > 0 && b.projectReceivedQty < b.bomQty) {
-    return {
-      token: 'PARTIALLY_RECEIVED',
-      label: `Đã nhận ${b.projectReceivedQty} / ${b.bomQty}`,
-      isReceivingDerived: true,
-    };
-  }
-  // Legacy mock data compatibility
-  if (b.status === 'FULFILLED') {
-    return {
-      token: 'FULLY_RECEIVED',
-      label: 'Đã nhận đủ',
-      isReceivingDerived: true,
-    };
-  }
-  if (b.status === 'PARTIALLY_RECEIVED') {
-    return {
-      token: 'PARTIALLY_RECEIVED',
-      label: `Đã nhận ${b.projectReceivedQty || 1} / ${b.bomQty}`,
-      isReceivingDerived: true,
-    };
-  }
-  if (b.status === 'PURCHASING') {
-    return {
-      token: 'ORDERED',
-      label: 'Đã đặt hàng',
-      isReceivingDerived: false,
-    };
-  }
-  // Default / NOT_PURCHASED
-  return {
-    token: 'AWAITING_QUOTATION',
-    label: 'Đang chờ báo giá',
-    isReceivingDerived: false,
-  };
-}
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -328,8 +277,17 @@ export const ProjectDetailPage: React.FC = () => {
     }
 
     // Post-purchase boundary check:
-    // If purchasing or receiving has started (status !== 'NOT_PURCHASED' or projectReceivedQty > 0)
-    const isStarted = item.status !== 'NOT_PURCHASED' || (item.projectReceivedQty && item.projectReceivedQty > 0);
+    // If purchasing or receiving has started:
+    const statusInfo = getBOMProcurementStatus(item);
+    const isStarted =
+      item.procurementStatus === 'AWAITING_PAYMENT' ||
+      item.procurementStatus === 'ORDERED' ||
+      item.procurementStatus === 'RETURN_OR_EXCHANGE' ||
+      statusInfo.isReceivingDerived ||
+      item.status === 'PURCHASING' ||
+      item.status === 'PARTIALLY_RECEIVED' ||
+      item.status === 'FULFILLED' ||
+      (item.projectReceivedQty !== undefined && item.projectReceivedQty > 0);
     if (isStarted) {
       setIsPostPurchasePlaceholderOpen(true);
       return;
@@ -865,9 +823,9 @@ export const ProjectDetailPage: React.FC = () => {
                 <option value="AWAITING_QUOTATION">Đang chờ báo giá</option>
                 <option value="AWAITING_PAYMENT">Chờ thanh toán</option>
                 <option value="ORDERED">Đã đặt hàng</option>
-                <option value="PARTIALLY_RECEIVED">Đã nhận x / y</option>
+                <option value="PARTIALLY_RECEIVED">Đã nhận 1 phần</option>
                 <option value="FULLY_RECEIVED">Đã nhận đủ</option>
-                <option value="RETURN_OR_EXCHANGE">Đang trả hàng / đổi hàng</option>
+                <option value="RETURN_OR_EXCHANGE">Đang trả / đổi hàng</option>
               </select>
             </div>
 
@@ -1260,14 +1218,15 @@ export const ProjectDetailPage: React.FC = () => {
         onClose={() => setIsPostPurchasePlaceholderOpen(false)}
       />
 
-      {/* Supplier & Price Right Drawer (REQ-04C) */}
+      {/* Supplier & Price Right Drawer (REQ-04C & REQ-04D) */}
       {(() => {
         if (!activeDrawerBOMItem) return null;
-        const drawerMat = materials.find((m) => m.id === activeDrawerBOMItem.materialId);
+        const currentBOMItem = boms.find((b) => b.id === activeDrawerBOMItem.id) || activeDrawerBOMItem;
+        const drawerMat = materials.find((m) => m.id === currentBOMItem.materialId);
         const drawerCat = categories.find((c) => c.id === drawerMat?.categoryId);
         const drawerMfg = manufacturers.find((m) => m.id === drawerMat?.manufacturerId);
         const drawerUom = uoms.find((u) => u.id === drawerMat?.uomId);
-        const drawerStatusInfo = getBOMProcurementStatus(activeDrawerBOMItem);
+        const drawerStatusInfo = getBOMProcurementStatus(currentBOMItem);
 
         return (
           <SupplierPriceDrawer
@@ -1276,7 +1235,7 @@ export const ProjectDetailPage: React.FC = () => {
               setIsDrawerOpen(false);
               setActiveDrawerBOMItem(null);
             }}
-            bomItem={activeDrawerBOMItem}
+            bomItem={currentBOMItem}
             material={drawerMat}
             category={drawerCat}
             manufacturer={drawerMfg}

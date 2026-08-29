@@ -4,9 +4,10 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   RotateCcw,
   Info,
+  Lock,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ProjectBOMItem,
@@ -16,6 +17,7 @@ import {
   UnitOfMeasure,
   Supplier,
   MaterialSupplierPrice,
+  BOMProcurementStatus,
 } from '../../domain/types';
 import {
   formatCurrency,
@@ -24,6 +26,7 @@ import {
   evaluateSupplierPrices,
 } from '../../domain/mockRules';
 import { StatusBadge } from '../common/StatusBadge';
+import { useApp } from '../../context/AppContext';
 
 interface SupplierPriceDrawerProps {
   isOpen: boolean;
@@ -52,12 +55,19 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
   prices,
   currentProcurementStatusDisplay,
   isReceivingDerived,
-  onShowNotice,
 }) => {
-  // Local draft states for UI preview in REQ-04C (discarded on close)
+  const { saveBOMPurchaseDecision, markBOMReturnOrExchange, canDo, addToast } = useApp();
+  const canSelectSupplier = canDo('bom', 'select_supplier');
+
+  // Local draft states
   const [draftSupplierId, setDraftSupplierId] = useState<string | null>(null);
   const [draftFinalUnitPrice, setDraftFinalUnitPrice] = useState<number | ''>('');
-  const [draftStatus, setDraftStatus] = useState<string>('AWAITING_QUOTATION');
+  const [draftStatus, setDraftStatus] = useState<BOMProcurementStatus>('AWAITING_QUOTATION');
+
+  // Modals inside drawer
+  const [isReplacementModalOpen, setIsReplacementModalOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnNote, setReturnNote] = useState('');
 
   // Supplier prices for this material
   const materialPrices = useMemo(() => {
@@ -74,6 +84,8 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
   useEffect(() => {
     if (bomItem) {
       setDraftSupplierId(bomItem.finalSupplierId || null);
+
+      // Preserve saved Project Final Unit Price if already persisted
       if (bomItem.finalUnitPrice && bomItem.finalUnitPrice > 0) {
         setDraftFinalUnitPrice(bomItem.finalUnitPrice);
       } else if (bomItem.finalSupplierId) {
@@ -84,26 +96,42 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
       }
 
       // Initial pre-receiving status draft
-      if (bomItem.status === 'PURCHASING') {
+      if (bomItem.procurementStatus && bomItem.procurementStatus !== 'RETURN_OR_EXCHANGE') {
+        setDraftStatus(bomItem.procurementStatus);
+      } else if (bomItem.status === 'PURCHASING') {
         setDraftStatus('ORDERED');
       } else {
         setDraftStatus('AWAITING_QUOTATION');
       }
+
+      // Reset modals
+      setIsReplacementModalOpen(false);
+      setIsReturnModalOpen(false);
+      setReturnNote('');
     }
-  }, [bomItem, materialPrices]);
+  }, [bomItem, materialPrices, isOpen]);
 
   if (!isOpen || !bomItem || !material) return null;
 
-  // Selected supplier price record
+  // Selected supplier and price record
   const selectedSupplierPrice = materialPrices.find((p) => p.supplierId === draftSupplierId);
   const selectedSupplier = suppliers.find((s) => s.id === draftSupplierId);
+  const currentPersistedSupplier = suppliers.find((s) => s.id === bomItem.finalSupplierId);
 
   const handleSelectSupplier = (supplierId: string) => {
+    if (!canSelectSupplier) return;
+
     setDraftSupplierId(supplierId);
-    const sp = materialPrices.find((p) => p.supplierId === supplierId);
-    if (sp && sp.currentPrice > 0) {
-      // Default Final Unit Price to chosen Supplier Current Price
-      setDraftFinalUnitPrice(sp.currentPrice);
+
+    // If re-selecting existing persisted supplier, preserve persisted price
+    if (supplierId === bomItem.finalSupplierId && bomItem.finalUnitPrice && bomItem.finalUnitPrice > 0) {
+      setDraftFinalUnitPrice(bomItem.finalUnitPrice);
+    } else {
+      // Default Final Unit Price to chosen Supplier's Current Price
+      const sp = materialPrices.find((p) => p.supplierId === supplierId);
+      if (sp && sp.currentPrice > 0) {
+        setDraftFinalUnitPrice(sp.currentPrice);
+      }
     }
   };
 
@@ -112,29 +140,97 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
       ? bomItem.bomQty * draftFinalUnitPrice
       : 0;
 
-  const handleConfirmClick = () => {
-    if (onShowNotice) {
-      onShowNotice(
-        'Lưu quyết định NCC & Giá sẽ được hoàn thiện trong REQ-04D theo đúng hợp đồng nghiệp vụ.'
-      );
+  const executeSaveDecision = () => {
+    const finalPriceNum = Number(draftFinalUnitPrice);
+    const result = saveBOMPurchaseDecision({
+      bomItemId: bomItem.id,
+      finalSupplierId: draftSupplierId,
+      finalUnitPrice: finalPriceNum,
+      procurementStatus: draftStatus,
+    });
+
+    if (result.success) {
+      setIsReplacementModalOpen(false);
+      onClose();
+    } else if (result.message) {
+      addToast('error', result.message);
     }
   };
 
-  const handleReturnExchangeClick = () => {
-    if (onShowNotice) {
-      onShowNotice(
-        'Thao tác Đánh dấu trả / đổi hàng là trường hợp ngoại lệ (Exception state). Quy trình xử lý chi tiết sẽ được hoàn thiện ở bước tiếp theo.'
-      );
+  const handleConfirmClick = () => {
+    if (!canSelectSupplier) {
+      addToast('error', 'Bạn không có quyền chọn Nhà cung cấp (bom.select_supplier).');
+      return;
+    }
+
+    // Validation
+    if (draftStatus === 'ORDERED' && !draftSupplierId) {
+      addToast('warning', 'Không thể đặt trạng thái "Đã đặt hàng" khi chưa chọn Nhà cung cấp.');
+      return;
+    }
+
+    if (draftSupplierId) {
+      if (typeof draftFinalUnitPrice !== 'number' || isNaN(draftFinalUnitPrice) || draftFinalUnitPrice <= 0) {
+        addToast('warning', 'Vui lòng nhập Đơn giá chốt hợp lệ (> 0 VND).');
+        return;
+      }
+    }
+
+    // Check if replacing an existing persisted supplier with another supplier
+    if (bomItem.finalSupplierId && draftSupplierId && bomItem.finalSupplierId !== draftSupplierId) {
+      setIsReplacementModalOpen(true);
+      return;
+    }
+
+    // Normal confirmation save
+    executeSaveDecision();
+  };
+
+  const handleConfirmReturnExchange = () => {
+    if (!canSelectSupplier) {
+      addToast('error', 'Bạn không có quyền thực hiện thao tác này (bom.select_supplier).');
+      return;
+    }
+
+    const result = markBOMReturnOrExchange({
+      bomItemId: bomItem.id,
+      note: returnNote,
+    });
+
+    if (result.success) {
+      setIsReturnModalOpen(false);
+      onClose();
+    } else if (result.message) {
+      addToast('error', result.message);
     }
   };
+
+  const getStatusLabel = (statusToken: BOMProcurementStatus) => {
+    switch (statusToken) {
+      case 'INTERNAL_REVIEW':
+        return 'Kiểm tra nội bộ';
+      case 'AWAITING_QUOTATION':
+        return 'Đang chờ báo giá';
+      case 'AWAITING_PAYMENT':
+        return 'Chờ thanh toán';
+      case 'ORDERED':
+        return 'Đã đặt hàng';
+      case 'RETURN_OR_EXCHANGE':
+        return 'Đang trả / đổi hàng';
+      default:
+        return statusToken;
+    }
+  };
+
+  const hasReceivedGoods = bomItem.projectReceivedQty && bomItem.projectReceivedQty > 0;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
       {/* Click outside backdrop to close */}
       <div className="flex-1" onClick={onClose} />
 
-      {/* Drawer Container (Desktop 520 - 640px) */}
-      <div className="w-full max-w-xl md:max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-in slide-in-from-right duration-200">
+      {/* Drawer Container */}
+      <div className="w-full max-w-xl md:max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-in slide-in-from-right duration-200 relative">
         {/* 1. Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-start justify-between gap-3 shrink-0">
           <div className="space-y-1.5 min-w-0">
@@ -157,7 +253,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
               </span>
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-600">Trạng thái:</span>
+                <span className="text-slate-600">Trạng thái hiện tại:</span>
                 <span className="font-semibold text-slate-800">{currentProcurementStatusDisplay}</span>
               </div>
             </div>
@@ -172,6 +268,16 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Permission Notice Banner */}
+        {!canSelectSupplier && (
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Chế độ xem:</strong> Bạn không có quyền chọn Nhà cung cấp (<code>bom.select_supplier</code>). Bạn có thể xem bảng giá nhưng không thể lưu quyết định.
+            </span>
+          </div>
+        )}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6 text-xs">
@@ -200,16 +306,23 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                   const isSelected = draftSupplierId === p.supplierId;
                   const isCurrentConfirmed = bomItem.finalSupplierId === p.supplierId;
                   const delta = calculatePriceDelta(p.currentPrice, p.previousPrice);
+                  const isInactive = sup?.status === 'INACTIVE';
 
                   return (
                     <div
                       key={p.id}
-                      onClick={() => handleSelectSupplier(p.supplierId)}
-                      className={`p-3.5 rounded-lg border transition cursor-pointer relative ${
+                      onClick={() => {
+                        if (!isInactive && canSelectSupplier) {
+                          handleSelectSupplier(p.supplierId);
+                        } else if (isInactive) {
+                          addToast('warning', 'Nhà cung cấp này đang ngưng hoạt động, không thể chọn mới.');
+                        }
+                      }}
+                      className={`p-3.5 rounded-lg border transition relative ${
                         isSelected
                           ? 'border-blue-500 bg-blue-50/40 ring-1 ring-blue-500'
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
-                      }`}
+                      } ${!canSelectSupplier || isInactive ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'}`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1 min-w-0">
@@ -220,6 +333,11 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                             {p.supplierProductCode && (
                               <span className="text-[10px] text-slate-400 font-mono">
                                 ({p.supplierProductCode})
+                              </span>
+                            )}
+                            {isInactive && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                Ngưng HĐ
                               </span>
                             )}
                           </div>
@@ -267,8 +385,10 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                               <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                               Đang chọn làm NCC cho BOM
                             </strong>
-                          ) : (
+                          ) : canSelectSupplier && !isInactive ? (
                             'Nhấn để chọn NCC này'
+                          ) : (
+                            'Không khả dụng'
                           )}
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono">MST: {sup?.taxCode || '—'}</span>
@@ -319,13 +439,16 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                 type="number"
                 min="0"
                 step="1000"
+                disabled={!canSelectSupplier}
                 value={draftFinalUnitPrice}
                 onChange={(e) => setDraftFinalUnitPrice(e.target.value ? Number(e.target.value) : '')}
                 placeholder="Nhập đơn giá chốt..."
-                className="w-full px-3 py-2 border border-blue-300 rounded text-xs font-bold text-slate-900 bg-blue-50/20 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className={`w-full px-3 py-2 border border-blue-300 rounded text-xs font-bold text-slate-900 bg-blue-50/20 focus:ring-1 focus:ring-blue-500 focus:outline-none ${
+                  !canSelectSupplier ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''
+                }`}
               />
               <p className="text-[10px] text-slate-500">
-                Mặc định lấy Giá hiện tại của NCC tại thời điểm chọn. Bạn có thể đàm phán điều chỉnh cho dự án này mà không làm thay đổi báo giá gốc của NCC.
+                Mặc định lấy Giá hiện tại của NCC tại thời điểm chọn. Bạn có thể đàm phán điều chỉnh cho dự án này mà không làm thay đổi bảng giá gốc của Nhà cung cấp.
               </p>
             </div>
 
@@ -373,20 +496,21 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'INTERNAL_REVIEW', label: 'Kiểm tra nội bộ' },
-                    { id: 'AWAITING_QUOTATION', label: 'Đang chờ báo giá' },
-                    { id: 'AWAITING_PAYMENT', label: 'Chờ thanh toán' },
-                    { id: 'ORDERED', label: 'Đã đặt hàng' },
+                    { id: 'INTERNAL_REVIEW' as BOMProcurementStatus, label: 'Kiểm tra nội bộ' },
+                    { id: 'AWAITING_QUOTATION' as BOMProcurementStatus, label: 'Đang chờ báo giá' },
+                    { id: 'AWAITING_PAYMENT' as BOMProcurementStatus, label: 'Chờ thanh toán' },
+                    { id: 'ORDERED' as BOMProcurementStatus, label: 'Đã đặt hàng' },
                   ].map((st) => (
                     <button
                       key={st.id}
                       type="button"
+                      disabled={!canSelectSupplier}
                       onClick={() => setDraftStatus(st.id)}
                       className={`p-2 rounded text-left border transition text-xs flex items-center justify-between ${
                         draftStatus === st.id
                           ? 'border-blue-500 bg-blue-50 text-blue-800 font-semibold'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
+                      } ${!canSelectSupplier ? 'cursor-not-allowed opacity-75' : ''}`}
                     >
                       <span>{st.label}</span>
                       {draftStatus === st.id && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
@@ -404,10 +528,26 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
               <span className="text-[11px] text-slate-500">Trường hợp trả / đổi hàng:</span>
               <button
                 type="button"
-                onClick={handleReturnExchangeClick}
-                className="px-2.5 py-1 border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded text-[11px] font-semibold flex items-center gap-1 transition"
+                disabled={!canSelectSupplier || !hasReceivedGoods}
+                onClick={() => {
+                  if (!hasReceivedGoods) {
+                    addToast('warning', 'Chỉ có thể đánh dấu trả/đổi hàng khi đã có phát sinh nhận hàng thực tế (Số lượng đã nhận > 0).');
+                    return;
+                  }
+                  setIsReturnModalOpen(true);
+                }}
+                className={`px-2.5 py-1 border rounded text-[11px] font-semibold flex items-center gap-1 transition ${
+                  hasReceivedGoods && canSelectSupplier
+                    ? 'border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100/80 cursor-pointer'
+                    : 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
+                }`}
+                title={
+                  !hasReceivedGoods
+                    ? 'Chỉ khả dụng khi đã có nhận hàng thực tế'
+                    : 'Đánh dấu ngoại lệ trả/đổi hàng'
+                }
               >
-                <RotateCcw className="w-3 h-3 text-rose-600" />
+                <RotateCcw className="w-3 h-3" />
                 <span>Đánh dấu trả / đổi hàng</span>
               </button>
             </div>
@@ -419,7 +559,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 text-xs font-semibold rounded text-slate-700 bg-white hover:bg-slate-100 transition"
+            className="px-4 py-2 border border-slate-300 text-xs font-semibold rounded text-slate-700 bg-white hover:bg-slate-100 transition cursor-pointer"
           >
             Hủy
           </button>
@@ -427,14 +567,148 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              disabled={!canSelectSupplier}
               onClick={handleConfirmClick}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded shadow-2xs transition flex items-center gap-1.5"
+              className={`px-5 py-2 text-xs font-bold rounded shadow-2xs transition flex items-center gap-1.5 ${
+                canSelectSupplier
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              }`}
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Xác nhận NCC & Giá</span>
             </button>
           </div>
         </div>
+
+        {/* --- MODAL 1: REPLACEMENT CONFIRMATION --- */}
+        {isReplacementModalOpen && (
+          <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Xác nhận thay đổi Nhà cung cấp</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Mục BOM này đã có Nhà cung cấp và Đơn giá chốt trước đó. Bạn có chắc chắn muốn thay đổi?
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-200 text-xs space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Nhà cung cấp:</span>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <span className="text-slate-500 line-through">{currentPersistedSupplier?.name || '—'}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="text-blue-700">{selectedSupplier?.name || '—'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Đơn giá chốt:</span>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <span className="text-slate-500 line-through">{formatCurrency(bomItem.finalUnitPrice)}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="text-blue-700">{formatCurrency(Number(draftFinalUnitPrice))}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Trạng thái:</span>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <span className="text-slate-500">{currentProcurementStatusDisplay}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="text-blue-700">{getStatusLabel(draftStatus)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReplacementModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 text-xs font-semibold rounded text-slate-700 bg-white hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={executeSaveDecision}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded shadow-2xs transition cursor-pointer"
+                >
+                  Xác nhận thay đổi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- MODAL 2: RETURN / EXCHANGE CONFIRMATION --- */}
+        {isReturnModalOpen && (
+          <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Xác nhận đánh dấu Trả / Đổi hàng</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ghi nhận trạng thái ngoại lệ trả / đổi hàng cho mục BOM này.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-rose-50/50 rounded-lg p-3 border border-rose-200 text-xs space-y-1.5 text-slate-700">
+                <p>
+                  <strong>Vật tư:</strong> {manufacturer?.name} | {material.model}
+                </p>
+                <p>
+                  <strong>Số lượng thực tế đã nhận:</strong>{' '}
+                  <span className="font-bold text-rose-700">
+                    {formatQuantity(bomItem.projectReceivedQty)} {uom?.code}
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-500 pt-1">
+                  * Thao tác này chỉ chuyển trạng thái BOM sang "Đang trả / đổi hàng" như một chỉ dấu ngoại lệ. Thao tác không làm thay đổi số lượng kho hay phát sinh phiếu xuất/nhập mới.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Ghi chú lý do trả / đổi hàng (Tùy chọn):
+                </label>
+                <textarea
+                  rows={3}
+                  value={returnNote}
+                  onChange={(e) => setReturnNote(e.target.value)}
+                  placeholder="Nhập lý do trả hàng, đổi model hoặc thỏa thuận với NCC..."
+                  className="w-full p-2.5 border border-slate-300 rounded text-xs text-slate-900 focus:ring-1 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReturnModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 text-xs font-semibold rounded text-slate-700 bg-white hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReturnExchange}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded shadow-2xs transition cursor-pointer"
+                >
+                  Xác nhận đánh dấu
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

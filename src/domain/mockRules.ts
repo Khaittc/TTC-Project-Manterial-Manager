@@ -1,5 +1,5 @@
 // Mock Business Rules & Formatting Utilities
-import { MaterialSupplierPrice, PriceTrend } from './types';
+import { MaterialSupplierPrice, PriceTrend, ProjectBOMItem } from './types';
 
 /**
  * Format currency to Vietnamese VND without VAT symbol / standard format
@@ -98,4 +98,104 @@ export function evaluateSupplierPrices(prices: MaterialSupplierPrice[]) {
     preferredPriceItem,
   };
 }
+
+/**
+ * Priority-based Procurement & Delivery Progress Status Resolver for BOM item
+ *
+ * Priority 1: Return / Exchange exception (RETURN_OR_EXCHANGE)
+ * Priority 2: Receiving-derived status (FULLY_RECEIVED / PARTIALLY_RECEIVED)
+ * Priority 3: Persisted procurement status (INTERNAL_REVIEW, AWAITING_QUOTATION, AWAITING_PAYMENT, ORDERED)
+ * Priority 4: Legacy fallback based on bomItem.status
+ */
+export function getBOMProcurementStatus(b: ProjectBOMItem): {
+  token: string;
+  label: string;
+  isReceivingDerived: boolean;
+} {
+  // Priority 1 — Return / Exchange exception
+  if (b.procurementStatus === 'RETURN_OR_EXCHANGE') {
+    return {
+      token: 'RETURN_OR_EXCHANGE',
+      label: 'Đang trả / đổi hàng',
+      isReceivingDerived: false,
+    };
+  }
+
+  // Priority 2 — Receiving-derived
+  if (b.projectReceivedQty !== undefined && b.projectReceivedQty >= b.bomQty && b.bomQty > 0) {
+    return {
+      token: 'FULLY_RECEIVED',
+      label: 'Đã nhận đủ',
+      isReceivingDerived: true,
+    };
+  }
+  if (b.projectReceivedQty !== undefined && b.projectReceivedQty > 0 && b.projectReceivedQty < b.bomQty) {
+    return {
+      token: 'PARTIALLY_RECEIVED',
+      label: `Đã nhận ${b.projectReceivedQty} / ${b.bomQty}`,
+      isReceivingDerived: true,
+    };
+  }
+
+  // Priority 3 — Persisted procurement status
+  if (b.procurementStatus === 'INTERNAL_REVIEW') {
+    return {
+      token: 'INTERNAL_REVIEW',
+      label: 'Kiểm tra nội bộ',
+      isReceivingDerived: false,
+    };
+  }
+  if (b.procurementStatus === 'AWAITING_QUOTATION') {
+    return {
+      token: 'AWAITING_QUOTATION',
+      label: 'Đang chờ báo giá',
+      isReceivingDerived: false,
+    };
+  }
+  if (b.procurementStatus === 'AWAITING_PAYMENT') {
+    return {
+      token: 'AWAITING_PAYMENT',
+      label: 'Chờ thanh toán',
+      isReceivingDerived: false,
+    };
+  }
+  if (b.procurementStatus === 'ORDERED') {
+    return {
+      token: 'ORDERED',
+      label: 'Đã đặt hàng',
+      isReceivingDerived: false,
+    };
+  }
+
+  // Priority 4 — Legacy fallback
+  if (b.status === 'FULFILLED') {
+    return {
+      token: 'FULLY_RECEIVED',
+      label: 'Đã nhận đủ',
+      isReceivingDerived: true,
+    };
+  }
+  if (b.status === 'PARTIALLY_RECEIVED') {
+    return {
+      token: 'PARTIALLY_RECEIVED',
+      label: `Đã nhận ${b.projectReceivedQty || 1} / ${b.bomQty}`,
+      isReceivingDerived: true,
+    };
+  }
+  if (b.status === 'PURCHASING') {
+    return {
+      token: 'ORDERED',
+      label: 'Đã đặt hàng',
+      isReceivingDerived: false,
+    };
+  }
+
+  // Default
+  return {
+    token: 'AWAITING_QUOTATION',
+    label: 'Đang chờ báo giá',
+    isReceivingDerived: false,
+  };
+}
+
 
