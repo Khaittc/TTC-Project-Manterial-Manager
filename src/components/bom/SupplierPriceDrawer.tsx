@@ -216,7 +216,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
       case 'ORDERED':
         return 'Đã đặt hàng';
       case 'RETURN_OR_EXCHANGE':
-        return 'Đang trả / đổi hàng';
+        return 'Đang trả hàng / đổi hàng';
       default:
         return statusToken;
     }
@@ -462,7 +462,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
               </div>
 
               <div className="p-3 bg-blue-50/60 rounded border border-blue-200">
-                <span className="text-[11px] text-blue-700 font-medium block mb-0.5">Thành tiền (Dự toán)</span>
+                <span className="text-[11px] text-blue-700 font-medium block mb-0.5">Thành tiền</span>
                 <span className="font-bold text-blue-800 text-sm">
                   {calculatedAmount > 0 ? formatCurrency(calculatedAmount) : '—'}
                 </span>
@@ -673,7 +673,7 @@ export const SupplierPriceDrawer: React.FC<SupplierPriceDrawerProps> = ({
                   </span>
                 </p>
                 <p className="text-[11px] text-slate-500 pt-1">
-                  * Thao tác này chỉ chuyển trạng thái BOM sang "Đang trả / đổi hàng" như một chỉ dấu ngoại lệ. Thao tác không làm thay đổi số lượng kho hay phát sinh phiếu xuất/nhập mới.
+                  * Thao tác này chỉ chuyển trạng thái BOM sang "Đang trả hàng / đổi hàng" như một chỉ dấu ngoại lệ. Thao tác không làm thay đổi số lượng kho hay phát sinh phiếu xuất/nhập mới.
                 </p>
               </div>
 

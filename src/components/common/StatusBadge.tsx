@@ -91,7 +91,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, customLa
 
     // Red
     case 'RETURN_OR_EXCHANGE':
-      label = customLabel || 'Đang trả / đổi hàng';
+      label = customLabel || 'Đang trả hàng / đổi hàng';
       colorClass = 'bg-rose-50 text-rose-700 border-rose-200';
       break;
     case 'ATTENTION_NEEDED':

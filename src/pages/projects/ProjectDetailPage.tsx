@@ -825,7 +825,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <option value="ORDERED">Đã đặt hàng</option>
                 <option value="PARTIALLY_RECEIVED">Đã nhận 1 phần</option>
                 <option value="FULLY_RECEIVED">Đã nhận đủ</option>
-                <option value="RETURN_OR_EXCHANGE">Đang trả / đổi hàng</option>
+                <option value="RETURN_OR_EXCHANGE">Đang trả hàng / đổi hàng</option>
               </select>
             </div>
 

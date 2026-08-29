@@ -95,7 +95,7 @@ interface AppContextType {
     bomItemId: string;
     finalSupplierId: string | null;
     finalUnitPrice: number;
-    procurementStatus?: BOMProcurementStatus;
+    procurementStatus: BOMProcurementStatus;
     procurementNote?: string;
   }) => { success: boolean; message?: string };
   markBOMReturnOrExchange: (payload: {
@@ -802,7 +802,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     bomItemId: string;
     finalSupplierId: string | null;
     finalUnitPrice: number;
-    procurementStatus?: BOMProcurementStatus;
+    procurementStatus: BOMProcurementStatus;
     procurementNote?: string;
   }): { success: boolean; message?: string } => {
     const targetBOM = boms.find((b) => b.id === bomItemId);
@@ -856,22 +856,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Determine legacy status mirror for backward compatibility
     let legacyStatus = targetBOM.status;
+    const effProcurementStatus = procurementStatus ?? targetBOM.procurementStatus;
+
     if (targetBOM.projectReceivedQty >= targetBOM.bomQty && targetBOM.bomQty > 0) {
       legacyStatus = 'FULFILLED';
     } else if (targetBOM.projectReceivedQty > 0) {
       legacyStatus = 'PARTIALLY_RECEIVED';
-    } else if (procurementStatus === 'INTERNAL_REVIEW' || procurementStatus === 'AWAITING_QUOTATION') {
+    } else if (effProcurementStatus === 'INTERNAL_REVIEW' || effProcurementStatus === 'AWAITING_QUOTATION') {
       legacyStatus = 'NOT_PURCHASED';
     } else if (
-      procurementStatus === 'AWAITING_PAYMENT' ||
-      procurementStatus === 'ORDERED' ||
-      procurementStatus === 'RETURN_OR_EXCHANGE'
+      effProcurementStatus === 'AWAITING_PAYMENT' ||
+      effProcurementStatus === 'ORDERED' ||
+      effProcurementStatus === 'RETURN_OR_EXCHANGE'
     ) {
       legacyStatus = 'PURCHASING';
-    } else if (finalSupplierId) {
-      legacyStatus = 'PURCHASING';
-    } else {
-      legacyStatus = 'NOT_PURCHASED';
     }
 
     const nextBOMs = boms.map((item) => {
@@ -927,7 +925,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBOMs(nextBOMs);
     StorageService.saveBOMs(nextBOMs);
-    addToast('success', 'Đã đánh dấu trạng thái Đang trả / đổi hàng cho mục BOM.');
+    addToast('success', 'Đã đánh dấu trạng thái Đang trả hàng / đổi hàng cho mục BOM.');
     return { success: true };
   };
 

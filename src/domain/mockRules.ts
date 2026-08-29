@@ -116,7 +116,7 @@ export function getBOMProcurementStatus(b: ProjectBOMItem): {
   if (b.procurementStatus === 'RETURN_OR_EXCHANGE') {
     return {
       token: 'RETURN_OR_EXCHANGE',
-      label: 'Đang trả / đổi hàng',
+      label: 'Đang trả hàng / đổi hàng',
       isReceivingDerived: false,
     };
   }
